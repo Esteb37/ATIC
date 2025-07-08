@@ -1,0 +1,532 @@
+<?xml version="1.0"?>
+<robot name="dragon_modular_visual_fixed">
+  <link name="L1">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <!-- =====================================
+       2‑DoF articulation between links (yaw+pitch)
+       ===================================== -->
+  <!-- ── yaw ─────────────────────────────── -->
+  <link name="joint1_yaw_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+    <collision name="joint1_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="joint1_yaw" type="revolute">
+    <parent link="L1"/>
+    <child  link="joint1_yaw_link"/>
+    <origin xyz="0.325 0 0" rpy="0 0 0"/>      <!-- at end of L1 rod ({L2} start) -->
+    <axis   xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+  </joint>
+
+  <joint name="joint1_pitch" type="revolute">
+    <parent link="joint1_yaw_link"/>
+    <child  link="joint1_pitch_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>          <!-- coincident with yaw frame -->
+    <axis   xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+  </joint>
+
+  <link name="joint1_pitch_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <joint name="joint1_fix" type="fixed">
+    <parent link="joint1_pitch_link"/>
+    <child  link="L2"/>
+    <origin xyz="0.025 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- =========================
+       LINK 2  {L2}
+       ========================= -->
+  <link name="L2">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <!-- yaw between L2 and pitch link -->
+  <link name="joint2_yaw_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+    <collision name="joint2_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="joint2_yaw" type="revolute">
+    <parent link="L2"/>
+    <child  link="joint2_yaw_link"/>
+    <origin xyz="0.325 0 0" rpy="0 0 0"/>         <!-- at end of L2 -->
+    <axis   xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+  </joint>
+
+  <joint name="joint2_pitch" type="revolute">
+    <parent link="joint2_yaw_link"/>
+    <child  link="joint2_pitch_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+  </joint>
+
+  <link name="joint2_pitch_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <joint name="joint2_fix" type="fixed">
+    <parent link="joint2_pitch_link"/>
+    <child  link="L3"/>
+    <origin xyz="0.025 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- =========================
+       LINK 3  {L3}
+       ========================= -->
+  <link name="L3">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <link name="joint3_yaw_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+    <collision name="joint3_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint3_yaw" type="revolute">
+    <parent link="L3"/>
+    <child  link="joint3_yaw_link"/>
+    <origin xyz="0.325 0 0" rpy="0 0 0"/>
+    <axis   xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+  </joint>
+
+  <joint name="joint3_pitch" type="revolute">
+    <parent link="joint3_yaw_link"/>
+    <child  link="joint3_pitch_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+  </joint>
+
+  <link name="joint3_pitch_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <joint name="joint3_fix" type="fixed">
+    <parent link="joint3_pitch_link"/>
+    <child  link="L4"/>
+    <origin xyz="0.025 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- =========================
+       LINK 4  {L4}
+       ========================= -->
+  <link name="L4">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <!-- =============================================================
+       VECTORING APPARATUS Gi & Fi  (identical pattern for each link)
+       ============================================================= -->
+  <!-- For brevity, only L1 variant shown in full; copy‑paste & rename
+       for L2, L3, L4 (replace index)                                -->
+
+  <!-- =============  {Gi1}  ϕ‑rotation about xLi  ================ -->
+  <link name="G1">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <collision name="L1_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.05 0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="L1_vec_phi" type="revolute">
+    <parent link="L1"/>
+    <child  link="G1"/>
+    <origin xyz="0.15 0 0" rpy="0 0 0"/>   <!-- at tip of L1 -->
+    <axis   xyz="1 0 0"/>                   <!-- ϕi roll -->
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
+  </joint>
+
+  <!-- =============  {Fi1}  θ‑rotation about local y  ============ -->
+  <link name="F1">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <collision name="F1_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.30 0.01"/>
+      </geometry>
+    </collision>
+    <!-- left rotor disc -->
+    <collision name="F1_rotor_L">
+      <origin xyz="0 0.15 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.06" length="0.01"/>
+      </geometry>
+    </collision>
+    <!-- right rotor disc -->
+    <collision name="F1_rotor_R">
+      <origin xyz="0 -0.15 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.06" length="0.01"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="L1_vec_theta" type="revolute">
+    <parent link="G1"/>
+    <child  link="F1"/>
+    <origin xyz="0 0 0.02" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
+    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+  </joint>
+
+  <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
+  <link name="L1_rotor_L">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.02"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="L1_rotor_L_fix" type="fixed">
+    <parent link="F1"/>
+    <child  link="L1_rotor_L"/>
+    <origin xyz="0 0.15 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="L1_rotor_R">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.02"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="L1_rotor_R_fix" type="fixed">
+    <parent link="F1"/>
+    <child  link="L1_rotor_R"/>
+    <origin xyz="0 -0.15 0" rpy="0 0 0"/>
+  </joint>
+
+
+
+  <link name="G2">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <collision name="L2_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.05 0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="L2_vec_phi" type="revolute">
+    <parent link="L2"/>
+    <child  link="G2"/>
+    <origin xyz="0.15 0 0" rpy="0 0 0"/>   <!-- at tip of L1 -->
+    <axis   xyz="1 0 0"/>                   <!-- ϕi roll -->
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
+  </joint>
+
+  <!-- =============  {Fi1}  θ‑rotation about local y  ============ -->
+  <link name="F2">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <collision name="F2_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.30 0.01"/>
+      </geometry>
+    </collision>
+    <!-- left rotor disc -->
+    <collision name="F2_rotor_L">
+      <origin xyz="0 0.15 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.06" length="0.01"/>
+      </geometry>
+    </collision>
+    <!-- right rotor disc -->
+    <collision name="F2_rotor_R">
+      <origin xyz="0 -0.15 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.06" length="0.01"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="L2_vec_theta" type="revolute">
+    <parent link="G2"/>
+    <child  link="F2"/>
+    <origin xyz="0 0 0.02" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
+    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+  </joint>
+
+  <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
+  <link name="L2_rotor_L">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.02"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="L2_rotor_L_fix" type="fixed">
+    <parent link="F2"/>
+    <child  link="L2_rotor_L"/>
+    <origin xyz="0 0.15 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="L2_rotor_R">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.02"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="L2_rotor_R_fix" type="fixed">
+    <parent link="F2"/>
+    <child  link="L2_rotor_R"/>
+    <origin xyz="0 -0.15 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="G3">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <collision name="L3_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.05 0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="L3_vec_phi" type="revolute">
+    <parent link="L3"/>
+    <child  link="G3"/>
+    <origin xyz="0.15 0 0" rpy="0 0 0"/>   <!-- at tip of L1 -->
+    <axis   xyz="1 0 0"/>                   <!-- ϕi roll -->
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
+  </joint>
+
+  <!-- =============  {Fi1}  θ‑rotation about local y  ============ -->
+  <link name="F3">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <collision name="F3_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.30 0.01"/>
+      </geometry>
+    </collision>
+    <!-- left rotor disc -->
+    <collision name="F3_rotor_L">
+      <origin xyz="0 0.15 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.06" length="0.01"/>
+      </geometry>
+    </collision>
+    <!-- right rotor disc -->
+    <collision name="F3_rotor_R">
+      <origin xyz="0 -0.15 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.06" length="0.01"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="L3_vec_theta" type="revolute">
+    <parent link="G3"/>
+    <child  link="F3"/>
+    <origin xyz="0 0 0.02" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
+    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+  </joint>
+
+  <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
+  <link name="L3_rotor_L">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.02"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="L3_rotor_L_fix" type="fixed">
+    <parent link="F3"/>
+    <child  link="L3_rotor_L"/>
+    <origin xyz="0 0.15 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="L3_rotor_R">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.02"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="L3_rotor_R_fix" type="fixed">
+    <parent link="F3"/>
+    <child  link="L3_rotor_R"/>
+    <origin xyz="0 -0.15 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="G4">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <collision name="L4_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.05 0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="L4_vec_phi" type="revolute">
+    <parent link="L4"/>
+    <child  link="G4"/>
+    <origin xyz="0.15 0 0" rpy="0 0 0"/>   <!-- at tip of L1 -->
+    <axis   xyz="1 0 0"/>                   <!-- ϕi roll -->
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
+  </joint>
+
+  <!-- =============  {Fi1}  θ‑rotation about local y  ============ -->
+  <link name="F4">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.05"/>
+      <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
+    </inertial>
+    <collision name="F4_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.05 0.30 0.01"/>
+      </geometry>
+    </collision>
+    <!-- left rotor disc -->
+    <collision name="F4_rotor_L">
+      <origin xyz="0 0.15 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.06" length="0.01"/>
+      </geometry>
+    </collision>
+    <!-- right rotor disc -->
+    <collision name="F4_rotor_R">
+      <origin xyz="0 -0.15 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.06" length="0.01"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="L4_vec_theta" type="revolute">
+    <parent link="G4"/>
+    <child  link="F4"/>
+    <origin xyz="0 0 0.02" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
+    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+  </joint>
+
+  <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
+  <link name="L4_rotor_L">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.02"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="L4_rotor_L_fix" type="fixed">
+    <parent link="F4"/>
+    <child  link="L4_rotor_L"/>
+    <origin xyz="0 0.15 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="L4_rotor_R">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.02"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="L4_rotor_R_fix" type="fixed">
+    <parent link="F4"/>
+    <child  link="L4_rotor_R"/>
+    <origin xyz="0 -0.15 0" rpy="0 0 0"/>
+  </joint>
+</robot>
