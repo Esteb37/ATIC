@@ -23,13 +23,15 @@ class Dragon:
         plane_id = p.loadURDF("plane.urdf")
 
         self.num_links = p.getNumJoints(self.robot_id)
-        self.num_rotors = len([i for i in range(self.num_links) if "rotor" in p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()])
+        self.rotor_indices = [i + 1 for i in range(self.num_links) if "rotor" in p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()]
+        self.num_rotors = len(self.rotor_indices)
         self.center_of_gravity = [0.0, 0.0, 0.0]
         self.link_positions = []
         self.link_orientations = []
         self.link_dimensions = []
         self.link_names = []
         self.total_mass = 0.0
+        self.external_forces = []
 
         self._drawn_artists = []
 
@@ -63,7 +65,7 @@ class Dragon:
                 dims = shape_data[0][3]
                 self.link_dimensions.append([d for d in dims])
             else:
-                self.link_dimensions.append([0.05, 0.05, 0.05])
+                self.link_dimensions.append([0.3, 0.05, 0.05])
 
             if mass > 0:
                 weighted_com = [w + mass * c for w, c in zip(weighted_com, pos)]
@@ -73,20 +75,19 @@ class Dragon:
             self.center_of_gravity = [w / self.total_mass for w in weighted_com]
 
     def set_joint_pos(self, name_or_id, value):
-
         if isinstance(name_or_id, int):
             p.setJointMotorControl2(self.robot_id, name_or_id, p.POSITION_CONTROL,
                                     targetPosition=value,
                                     force=1.0,
                                     maxVelocity=1.0)
         else:
-            name = name_or_id.lower()
+            name = name_or_id
             for i in range(self.num_links):
-                joint_name = p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()
+                joint_name = p.getJointInfo(self.robot_id, i)[12].decode('utf-8')
                 if name in joint_name:
                     p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
                                             targetPosition=value,
-                                            force=1.0,
+                                            force=10.0,
                                             maxVelocity=5.0)
                     return
             raise ValueError(f"Joint '{name}' not found.")
@@ -97,18 +98,28 @@ class Dragon:
     ######################### SIMULATION #############################
 
     def thrust(self, forces):
-        rotor_indices = [i for i in range(self.num_links) if "rotor" in p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()]
-        if len(rotor_indices) != len(forces):
+        if len(self.rotor_indices) != len(forces):
             raise ValueError("Number of forces must match number of rotors.")
 
-        for i, force in zip(rotor_indices, forces):
-            p.applyExternalForce(self.robot_id, i, [0, 0, force], self.link_positions[i], p.WORLD_FRAME)
+        self.external_forces.clear()
+
+        for i, force in zip(self.rotor_indices, forces):
+            position = self.link_positions[i]
+            orientation = self.link_orientations[i]
+
+            # Local thrust direction in rotor frame
+            local_force = [0, 0, force]
+
+            # Convert to world frame
+            world_force = p.rotateVector(orientation, local_force)
+
+            self.external_forces.append((position, world_force))
+            p.applyExternalForce(self.robot_id, i, world_force, position, p.WORLD_FRAME)
 
     def lock_joints(self):
         # Lock all joints to their current positions
         for i in range(self.num_links):
             self.set_joint_pos(i, p.getJointState(self.robot_id, i)[0])
-
 
     def step(self):
         p.stepSimulation()
@@ -140,14 +151,17 @@ class Dragon:
         ax.add_collection3d(box)
         self._drawn_artists.append(box)
 
-
     def init_plot(self):
         self.fig = plt.figure(figsize=(20, 10))
         self.ax_world = self.fig.add_subplot(121, projection='3d')
         self.ax_robot = self.fig.add_subplot(122, projection='3d')
         self.scatter_cog_world = self.ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
         self.scatter_cog_robot = self.ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
-        self.plot_plane(self.ax_world)  # Add this call to plot the plane
+
+        self.scatter_rotors_world = self.ax_world.scatter([], [], [], color='black', s=80, label='Rotors')
+        self.scatter_rotors_robot = self.ax_robot.scatter([], [], [], color='black', s=80, label='Rotors')
+
+        self.plot_plane(self.ax_world)
         self.ax_world.set_xlim([-2, 2])
         self.ax_world.set_ylim([-2, 2])
         self.ax_world.set_zlim([0, 5])
@@ -172,8 +186,16 @@ class Dragon:
         self._drawn_artists.clear()
 
         for pos, orn, dims, name in zip(self.link_positions, self.link_orientations, self.link_dimensions, self.link_names):
+            if len(name) != 2:
+                continue
 
-            if name[0] == "G" or name[0] == "F":
+            if name[0] == "L":
+                offset = [0.15, 0, 0]
+                # rotate the offset vector to match the orientation of the link
+                offset = p.rotateVector(orn, offset)
+                pos = [pos[i] + offset[i] for i in range(3)]
+
+            if name[0] == "L" or name[0] == "F":
                 color = self._get_color(name)
                 self.draw_box(self.ax_world, pos, orn, dims, color)
 
@@ -183,6 +205,30 @@ class Dragon:
         cog = self.center_of_gravity
         self.scatter_cog_world._offsets3d = ([cog[0]], [cog[1]], [cog[2]])
         self.scatter_cog_robot._offsets3d = ([0], [0], [0])
+
+        # Update rotor scatter points
+        rotor_positions_world = [self.link_positions[i] for i in self.rotor_indices]
+        rotor_positions_robot = [np.array(pos) - np.array(self.center_of_gravity) for pos in rotor_positions_world]
+
+
+        if rotor_positions_world:
+            xs, ys, zs = zip(*rotor_positions_world)
+            self.scatter_rotors_world._offsets3d = (xs, ys, zs)
+
+            xs_r, ys_r, zs_r = zip(*rotor_positions_robot)
+            self.scatter_rotors_robot._offsets3d = (xs_r, ys_r, zs_r)
+        else:
+            self.scatter_rotors_world._offsets3d = ([], [], [])
+            self.scatter_rotors_robot._offsets3d = ([], [], [])
+
+        for pos, force in self.external_forces:
+            rel_pos = np.array(pos) - np.array(self.center_of_gravity)
+            arrow = self.ax_robot.quiver(
+                rel_pos[0], rel_pos[1], rel_pos[2],
+                force[0], force[1], force[2],
+                color='green', length=0.2, normalize=True
+            )
+            self._drawn_artists.append(arrow)
 
     def plot_plane(self, ax, size=2.0, z=0.0, color='gray', alpha=0.3):
         # Define the corners of the plane square

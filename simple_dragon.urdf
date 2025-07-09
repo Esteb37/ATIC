@@ -6,6 +6,12 @@
       <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
+    <collision name="L1_body">
+      <origin xyz="0.15 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.05 0.05"/>
+      </geometry>
+    </collision>
   </link>
 
   <!-- =====================================
@@ -65,6 +71,12 @@
       <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
+    <collision name="L2_body">
+      <origin xyz="0.15 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.3 0.05 0.05"/>
+      </geometry>
+    </collision>
   </link>
 
 
@@ -81,12 +93,6 @@
       <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
-    <collision name="L1_body">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <box size="0.3 0.05 0.05"/>
-      </geometry>
-    </collision>
   </link>
 
   <joint name="L1_vec_phi" type="revolute">
@@ -169,12 +175,6 @@
       <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
-    <collision name="L2_body">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <box size="0.3 0.05 0.05"/>
-      </geometry>
-    </collision>
   </link>
 
   <joint name="L2_vec_phi" type="revolute">
