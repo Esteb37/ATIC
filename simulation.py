@@ -3,22 +3,18 @@ import threading
 
 def sim_loop(dragon):
 
-
-    dragon.set_joint_pos("joint3_pitch", 0)
-    dragon.set_joint_pos("joint2_pitch", 0)
-    dragon.set_joint_pos("joint1_pitch", 0)
-    dragon.set_joint_pos("joint3_yaw", 1.5)
-    dragon.set_joint_pos("joint2_yaw", 1.5)
-    dragon.set_joint_pos("joint1_yaw", 1.5)
-
-
-    thrust = 9.81 * dragon.total_mass / 8
     while True:
+        dragon.set_joint_pos("joint3_pitch", 0)
+        dragon.set_joint_pos("joint2_pitch", 0)
+        dragon.set_joint_pos("joint1_pitch", 0)
+        dragon.set_joint_pos("joint3_yaw", 0)
+        dragon.set_joint_pos("joint2_yaw", 0)
+        dragon.set_joint_pos("joint1_yaw", 0)
         dragon.step()
-        dragon.thrust([thrust] * 8)
+        dragon.hover()
 
 def main():
-    dragon = Dragon()
+    dragon = Dragon("simple_dragon.urdf")
 
     threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
     dragon.animate()

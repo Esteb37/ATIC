@@ -23,6 +23,7 @@ class Dragon:
         plane_id = p.loadURDF("plane.urdf")
 
         self.num_links = p.getNumJoints(self.robot_id)
+        self.num_rotors = len([i for i in range(self.num_links) if "rotor" in p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()])
         self.center_of_gravity = [0.0, 0.0, 0.0]
         self.link_positions = []
         self.link_orientations = []
@@ -77,7 +78,7 @@ class Dragon:
             p.setJointMotorControl2(self.robot_id, name_or_id, p.POSITION_CONTROL,
                                     targetPosition=value,
                                     force=1.0,
-                                    maxVelocity=5.0)
+                                    maxVelocity=1.0)
         else:
             name = name_or_id.lower()
             for i in range(self.num_links):
@@ -91,13 +92,7 @@ class Dragon:
             raise ValueError(f"Joint '{name}' not found.")
 
     def hover(self):
-        thrust_force = [0, 0, 9.82 * self.total_mass]  # Newtons upward to hover
-
-        p.applyExternalForce(objectUniqueId=self.robot_id,
-                     linkIndex=-1,
-                     forceObj=thrust_force,
-                     posObj=self.center_of_gravity,
-                     flags=p.WORLD_FRAME)
+        self.thrust([9.82 * self.total_mass / self.num_rotors] * self.num_rotors)
 
     ######################### SIMULATION #############################
 
@@ -147,17 +142,28 @@ class Dragon:
 
 
     def init_plot(self):
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111, projection='3d')
-        self.scatter_cog = self.ax.scatter([], [], [], color='g', s=100, label='Center of Gravity')
-        self.plot_plane(self.ax)  # Add this call to plot the plane
-        self.ax.set_xlim([-2, 2])
-        self.ax.set_ylim([-2, 2])
-        self.ax.set_zlim([0, 5])
-        self.ax.set_xlabel('X')
-        self.ax.set_ylabel('Y')
-        self.ax.set_zlabel('Z')
-        self.ax.set_title('Dragon URDF Center of Mass Visualization')
+        self.fig = plt.figure(figsize=(20, 10))
+        self.ax_world = self.fig.add_subplot(121, projection='3d')
+        self.ax_robot = self.fig.add_subplot(122, projection='3d')
+        self.scatter_cog_world = self.ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
+        self.scatter_cog_robot = self.ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
+        self.plot_plane(self.ax_world)  # Add this call to plot the plane
+        self.ax_world.set_xlim([-2, 2])
+        self.ax_world.set_ylim([-2, 2])
+        self.ax_world.set_zlim([0, 5])
+        self.ax_world.set_xlabel('X')
+        self.ax_world.set_ylabel('Y')
+        self.ax_world.set_zlabel('Z')
+        self.ax_world.set_title('Flight Simulation')
+
+        self.ax_robot.set_xlim([-1, 1])
+        self.ax_robot.set_ylim([-1, 1])
+        self.ax_robot.set_zlim([-1, 1])
+        self.ax_robot.set_xlabel('X')
+        self.ax_robot.set_ylabel('Y')
+        self.ax_robot.set_zlabel('Z')
+        self.ax_robot.set_title('Forces')
+
         self.box_artists = []
 
     def update_plot(self, frame):
@@ -169,11 +175,14 @@ class Dragon:
 
             if name[0] == "G" or name[0] == "F":
                 color = self._get_color(name)
-                self.draw_box(self.ax, pos, orn, dims, color)
+                self.draw_box(self.ax_world, pos, orn, dims, color)
+
+                rel_pos = np.array(pos) - np.array(self.center_of_gravity)
+                self.draw_box(self.ax_robot, rel_pos, orn, dims, color)
 
         cog = self.center_of_gravity
-        self.scatter_cog._offsets3d = ([cog[0]], [cog[1]], [cog[2]])
-
+        self.scatter_cog_world._offsets3d = ([cog[0]], [cog[1]], [cog[2]])
+        self.scatter_cog_robot._offsets3d = ([0], [0], [0])
 
     def plot_plane(self, ax, size=2.0, z=0.0, color='gray', alpha=0.3):
         # Define the corners of the plane square
