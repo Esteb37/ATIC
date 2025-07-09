@@ -3,34 +3,35 @@ import pybullet_data
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from time import sleep
-import threading
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 
 class Dragon:
 
-    def __init__(self, urdf_path="dragon.urdf"):
+    def __init__(self, urdf_path="dragon.urdf",
+                 start_pos = [0, 0, 3],
+                 start_orientation = [0, 0, 0]):
+
         p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        start_pos = [0, 0, 5]
-        start_orientation = p.getQuaternionFromEuler([0, 0, 0])
+
+        start_orientation = p.getQuaternionFromEuler(start_orientation)
         self.robot_id = p.loadURDF(urdf_path, start_pos, start_orientation, useFixedBase=False)
         p.setGravity(0, 0, -9.81)
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         plane_id = p.loadURDF("plane.urdf")
 
-
-
         self.num_links = p.getNumJoints(self.robot_id)
         self.center_of_gravity = [0.0, 0.0, 0.0]
         self.link_positions = []
         self.link_names = []
+        self.total_mass = 0.0
 
         self.get_com()
 
     def get_com(self):
-        total_mass = 0.0
+        self.total_mass = 0.0
         weighted_com = [0.0, 0.0, 0.0]
         self.link_positions = []
         self.link_names = []
@@ -54,13 +55,14 @@ class Dragon:
 
             if mass > 0:
                 weighted_com = [w + mass * c for w, c in zip(weighted_com, com_pos)]
-                total_mass += mass
+                self.total_mass += mass
 
-        if total_mass > 0:
-            self.center_of_gravity = [w / total_mass for w in weighted_com]
+        if self.total_mass > 0:
+            self.center_of_gravity = [w / self.total_mass for w in weighted_com]
+
         return self.center_of_gravity
 
-    def set_pos(self, name, value):
+    def set_joint_pos(self, name, value):
         name = name.lower()
         for i in range(self.num_links):
             joint_name = p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()
@@ -71,6 +73,17 @@ class Dragon:
                                         maxVelocity=1.0)
                 return
         raise ValueError(f"Joint '{name}' not found.")
+
+    def hover(self):
+        thrust_force = [0, 0, 9.82 * self.total_mass]  # Newtons upward to hover
+
+        p.applyExternalForce(objectUniqueId=self.robot_id,
+                     linkIndex=-1,
+                     forceObj=thrust_force,
+                     posObj=self.center_of_gravity,
+                     flags=p.WORLD_FRAME)
+
+    ######################### SIMULATION #############################
 
     def step(self):
         p.stepSimulation()
@@ -130,20 +143,3 @@ class Dragon:
         self.init_plot()
         ani = FuncAnimation(self.fig, self.update_plot, interval=1000/60)
         plt.show()
-
-
-def sim_loop(dragon):
-    while True:
-        dragon.step()
-
-
-def main():
-    dragon = Dragon()
-    dragon.set_pos("joint2_yaw", 0.5)
-    dragon.set_pos("joint3_pitch", 0.5)
-
-    threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
-    dragon.animate()
-
-if __name__ == "__main__":
-    main()
