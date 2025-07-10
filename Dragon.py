@@ -6,6 +6,8 @@ from time import sleep
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 
+GRAVITY = 9.81
+
 class Dragon:
 
     def __init__(self, urdf_path="dragon.urdf",
@@ -15,7 +17,7 @@ class Dragon:
         ####### Setup PyBullet #######
         p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        p.setGravity(0, 0, -9.81)
+        p.setGravity(0, 0, -GRAVITY)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.loadURDF("plane.urdf")
 
@@ -190,7 +192,7 @@ class Dragon:
                 ax.quiver(
                     pos[0], pos[1], pos[2],
                     force[0], force[1], force[2],
-                    color='green', length=magnitude / 9.81, normalize=True
+                    color='green', length=magnitude / GRAVITY, normalize=True
                 )
 
             total_force = self.sum_of_forces()
@@ -199,7 +201,7 @@ class Dragon:
                 ax.quiver(
                     self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
                     total_force[0], total_force[1], total_force[2],
-                    color='blue', length=magnitude / 9.81, normalize=True
+                    color='blue', length=magnitude / GRAVITY, normalize=True
                 )
 
     ##### Private Methods #####
@@ -281,7 +283,7 @@ class Dragon:
             arrow = self._ax_robot.quiver(
                 rel_pos[0], rel_pos[1], rel_pos[2],
                 force[0], force[1], force[2],
-                color='green', length=magnitude / 9.81, normalize=True
+                color='green', length=magnitude / GRAVITY, normalize=True
             )
             self._drawn_artists.append(arrow)
 
@@ -290,7 +292,7 @@ class Dragon:
         arrow = self._ax_robot.quiver(
             0, 0, 0,
             total_force[0], total_force[1], total_force[2],
-            color='blue', length=magnitude / 9.81, normalize=True
+            color='blue', length=magnitude / GRAVITY, normalize=True
         )
         self._drawn_artists.append(arrow)
 
