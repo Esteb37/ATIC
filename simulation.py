@@ -2,7 +2,6 @@ from Dragon import Dragon
 import threading
 
 def sim_loop(dragon):
-
     while True:
         dragon.step()
         dragon.hover()

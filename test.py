@@ -8,7 +8,6 @@ urdf = "dragon.urdf"
 robot = pk.build_chain_from_urdf(open(urdf, mode="rb").read())
 robot.print_tree()
 
-
 dof = len(robot.get_joint_parameter_names())
 
 # Set joint angles (example with 0s, adjust as needed)

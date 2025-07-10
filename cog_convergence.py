@@ -31,8 +31,7 @@ w = np.ones(dragon.num_modules)
 history = []
 for i in range(20):
   G = A @ G
-  w = A @ w
-  CoG = [G[i] / w[i] for i in range(dragon.num_modules)]
+  CoG = G.copy()
   history.append(CoG.copy())
 
 # 3D plot

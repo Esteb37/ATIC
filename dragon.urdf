@@ -3,7 +3,7 @@
   <link name="L1">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -15,7 +15,7 @@
   <link name="joint1_yaw_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
     <collision name="joint1_body">
@@ -45,7 +45,7 @@
   <link name="joint1_pitch_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -62,7 +62,7 @@
   <link name="L2">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -71,7 +71,7 @@
   <link name="joint2_yaw_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
     <collision name="joint2_body">
@@ -101,7 +101,7 @@
   <link name="joint2_pitch_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -118,7 +118,7 @@
   <link name="L3">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -126,7 +126,7 @@
   <link name="joint3_yaw_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
     <collision name="joint3_body">
@@ -155,7 +155,7 @@
   <link name="joint3_pitch_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -172,7 +172,7 @@
   <link name="L4">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.01"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -187,7 +187,7 @@
   <link name="G1">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1"/>
+      <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
     <collision name="L1_body">
@@ -210,7 +210,7 @@
   <link name="F1">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
     <collision name="F1_body">
@@ -247,7 +247,7 @@
   <link name="L1_rotor_L">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.02"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -260,7 +260,7 @@
   <link name="L1_rotor_R">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.02"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -275,7 +275,7 @@
   <link name="G2">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1"/>
+      <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
     <collision name="L2_body">
@@ -298,7 +298,7 @@
   <link name="F2">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
     <collision name="F2_body">
@@ -335,7 +335,7 @@
   <link name="L2_rotor_L">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.02"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -348,7 +348,7 @@
   <link name="L2_rotor_R">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.02"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -361,7 +361,7 @@
   <link name="G3">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1"/>
+      <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
     <collision name="L3_body">
@@ -384,7 +384,7 @@
   <link name="F3">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
     <collision name="F3_body">
@@ -421,7 +421,7 @@
   <link name="L3_rotor_L">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.02"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -434,7 +434,7 @@
   <link name="L3_rotor_R">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.02"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -447,7 +447,7 @@
   <link name="G4">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1"/>
+      <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
     <collision name="L4_body">
@@ -470,7 +470,7 @@
   <link name="F4">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.05"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
     <collision name="F4_body">
@@ -507,7 +507,7 @@
   <link name="L4_rotor_L">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.02"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -520,7 +520,7 @@
   <link name="L4_rotor_R">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0"/>
+      <mass value="0.02"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>

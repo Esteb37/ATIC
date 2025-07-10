@@ -34,7 +34,7 @@ class Dragon:
         self.kinematics = {}
 
         ####### Dynamics Variables #######
-        self.module_thrusts = []
+        self.rotor_thrusts = []
         self.external_forces = []
         self.center_of_gravity = np.zeros(3)
         self.total_mass = 0.0
@@ -72,7 +72,7 @@ class Dragon:
                 self.total_mass += mass
 
     def link_pos_orn(self, name_or_id):
-        idx = self._name_or_id(name_or_id)
+        idx = self._get_id(name_or_id)
         if idx == -1:
             pos, orn = p.getBasePositionAndOrientation(self.robot_id)
             return np.array(pos), np.array(orn)
@@ -102,16 +102,26 @@ class Dragon:
         rotor_index_r = (module_index - 1) * 2
         rotor_index_l = rotor_index_r + 1
 
-        thrust_right = self.module_thrusts[rotor_index_r]
-        thrust_left = self.module_thrusts[rotor_index_l]
+        thrust_right = self.rotor_thrusts[rotor_index_r]
+        thrust_left = self.rotor_thrusts[rotor_index_l]
 
-        return thrust_left + thrust_right
+        thrust = thrust_right + thrust_left
+
+        return thrust
 
     def sum_of_forces(self):
         forces = np.zeros(3)
         for _, force in self.external_forces:
             forces += np.array(force)
         return forces
+
+    def link_position(self, name_or_id):
+        pos, _ = self.link_pos_orn(name_or_id)
+        return np.array(pos)
+
+    def link_orientation(self, name_or_id):
+        _, orn = self.link_pos_orn(name_or_id)
+        return np.array(orn)
 
     ######## Control Methods #######
     def thrust(self, forces):
@@ -120,7 +130,7 @@ class Dragon:
 
         self.external_forces.clear()
 
-        self.module_thrusts = forces.copy()
+        self.rotor_thrusts = forces.copy()
 
         for rotor_name, force in zip(self.rotor_names, forces):
             position = self.kinematics[rotor_name]["position"]
@@ -134,7 +144,7 @@ class Dragon:
             self.external_forces.append((position, world_force))
 
     def set_joint_pos(self, name_or_id, value):
-        idx = self._name_or_id(name_or_id)
+        idx = self._get_id(name_or_id)
         p.setJointMotorControl2(self.robot_id, idx, p.POSITION_CONTROL,
                                 targetPosition=value,
                                 force=10.0,
@@ -142,7 +152,7 @@ class Dragon:
 
 
     def reset_joint_pos(self, name_or_id, value=0.0):
-        idx = self._name_or_id(name_or_id)
+        idx = self._get_id(name_or_id)
         p.resetJointState(self.robot_id, idx, value)
 
     def hover(self):
@@ -201,7 +211,7 @@ class Dragon:
                 ax.quiver(
                     self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
                     total_force[0], total_force[1], total_force[2],
-                    color='blue', length=magnitude / GRAVITY, normalize=True
+                    color='black', length=magnitude / GRAVITY, normalize=True
                 )
 
     ##### Private Methods #####
@@ -318,11 +328,16 @@ class Dragon:
             return "red"
         return "blue"
 
-    def _name_or_id(self, name_or_id):
+    def _get_id(self, name_or_id):
         if isinstance(name_or_id, int):
             return name_or_id
         else:
             try:
                 return self.kinematics[name_or_id]["index"]
             except KeyError:
+
+                for name, info in self.kinematics.items():
+                    if name_or_id.lower() in name.lower():
+                        return info["index"]
+
                 raise ValueError(f"Joint '{name_or_id}' not found.")
