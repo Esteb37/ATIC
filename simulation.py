@@ -5,7 +5,8 @@ def sim_loop(dragon):
 
     while True:
         dragon.step()
-        dragon.hover()
+        input()
+        # dragon.hover()
 
 def main():
     dragon = Dragon("dragon.urdf")
