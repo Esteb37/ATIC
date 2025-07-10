@@ -4,10 +4,9 @@ import numpy as np
 
 dragon = Dragon()
 
-dragon.reset_joint_pos("joint1_pitch",-1)
+dragon.reset_joint_pos("joint1_yaw", 1)
 dragon.reset_joint_pos("joint2_yaw", 1)
-dragon.reset_joint_pos("joint3_pitch",-1)
-dragon.reset_joint_pos("joint2_pitch", -1)
+dragon.reset_joint_pos("joint3_yaw",1)
 dragon.step()
 dragon.hover()
 
@@ -18,16 +17,17 @@ A = np.array([
                 [0,   0,   1/3, 2/3]
             ])
 
-G = np.array([dragon.link_position("G1"),
-              dragon.link_position("G2"),
-              dragon.link_position("G3"),
-              dragon.link_position("G4")])
 
+F = np.array([dragon.module_thrust(1),
+              dragon.module_thrust(2),
+              dragon.module_thrust(3),
+              dragon.module_thrust(4)])
 
+dragon.rel
 F_real = dragon.sum_of_forces()
 CoG_real = dragon.center_of_gravity
 
-CoG = G.copy()
+F = F.copy()
 w = np.ones(dragon.num_modules)
 
 history = []
@@ -88,5 +88,5 @@ ax4.set_ylim([2, 4])
 ax4.axhline(CoG_real[2], color='black', linestyle='--', label='Real CoG Z')
 ax4.legend()
 
-dragon.plot_on_ax(ax, CoG = True, forces = False)
+dragon.plot_on_ax(ax, CoG = False, forces = True)
 plt.show()

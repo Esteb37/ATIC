@@ -31,6 +31,7 @@ class Dragon:
         self.link_orientations = []
         self.link_dimensions = []
         self.link_names = []
+        self.module_thrusts = []
         self.total_mass = 0.0
         self.external_forces = []
 
@@ -108,6 +109,17 @@ class Dragon:
     def hover(self):
         self.thrust([9.82 * self.total_mass / self.num_rotors] * self.num_rotors)
 
+    def module_thrust(self, module_index):
+        if module_index < 1 or module_index > self.num_modules:
+            raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
+
+        rotor_index_r = (module_index - 1) * 2
+        rotor_index_l = rotor_index_r + 1
+
+        thrust_right = self.module_thrusts[rotor_index_r]
+        thrust_left = self.module_thrusts[rotor_index_l]
+
+        return thrust_left + thrust_right
 
     def sum_of_forces(self):
         forces = np.zeros(3)
@@ -115,13 +127,13 @@ class Dragon:
             forces += np.array(force)
         return forces
 
-    ######################### SIMULATION #############################
-
     def thrust(self, forces):
         if len(self.rotor_indices) != len(forces):
             raise ValueError("Number of forces must match number of rotors.")
 
         self.external_forces.clear()
+
+        self.module_thrusts = forces.copy()
 
         for i, force in zip(self.rotor_indices, forces):
             position = self.link_positions[i]
@@ -188,9 +200,6 @@ class Dragon:
         self.scatter_cog_world = self.ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
         self.scatter_cog_robot = self.ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
 
-        self.scatter_rotors_world = self.ax_world.scatter([], [], [], color='black', s=80, label='Rotors')
-        self.scatter_rotors_robot = self.ax_robot.scatter([], [], [], color='black', s=80, label='Rotors')
-
         self.plot_plane(self.ax_world)
         self.ax_world.set_xlim([-2, 2])
         self.ax_world.set_ylim([-2, 2])
@@ -236,27 +245,13 @@ class Dragon:
         self.scatter_cog_world._offsets3d = ([cog[0]], [cog[1]], [cog[2]])
         self.scatter_cog_robot._offsets3d = ([0], [0], [0])
 
-        # Update rotor scatter points
-        rotor_positions_world = [self.link_positions[i] for i in self.rotor_indices]
-        rotor_positions_robot = [np.array(pos) - np.array(self.center_of_gravity) for pos in rotor_positions_world]
-
-        if rotor_positions_world:
-            xs, ys, zs = zip(*rotor_positions_world)
-            self.scatter_rotors_world._offsets3d = (xs, ys, zs)
-
-            xs_r, ys_r, zs_r = zip(*rotor_positions_robot)
-            self.scatter_rotors_robot._offsets3d = (xs_r, ys_r, zs_r)
-        else:
-            self.scatter_rotors_world._offsets3d = ([], [], [])
-            self.scatter_rotors_robot._offsets3d = ([], [], [])
-
         for pos, force in self.external_forces:
             rel_pos = np.array(pos) - np.array(self.center_of_gravity)
             magnitude = np.linalg.norm(force)
             arrow = self.ax_robot.quiver(
                 rel_pos[0], rel_pos[1], rel_pos[2],
                 force[0], force[1], force[2],
-                color='green', length=0.05*magnitude, normalize=True
+                color='green', length=magnitude / 9.81, normalize=True
             )
             self._drawn_artists.append(arrow)
 
@@ -265,7 +260,7 @@ class Dragon:
         arrow = self.ax_robot.quiver(
             0, 0, 0,
             total_force[0], total_force[1], total_force[2],
-            color='red', length=0.05*magnitude, normalize=True
+            color='blue', length=magnitude / 9.81, normalize=True
         )
         self._drawn_artists.append(arrow)
 
@@ -293,11 +288,6 @@ class Dragon:
             ax.scatter([cog[0]], [cog[1]], [cog[2]], color='g', s=100, label='Center of Gravity')
 
 
-        rotor_positions = [self.link_positions[i] for i in self.rotor_indices]
-        rotor_positions_robot = [np.array(pos) for pos in rotor_positions]
-        xs_r, ys_r, zs_r = zip(*rotor_positions_robot)
-        ax.scatter(xs_r, ys_r, zs_r, color='black', s=80, label='Rotors')
-
         if forces:
             for pos, force in self.external_forces:
                 rel_pos = np.array(pos)
@@ -305,7 +295,7 @@ class Dragon:
                 ax.quiver(
                     rel_pos[0], rel_pos[1], rel_pos[2],
                     force[0], force[1], force[2],
-                    color='green', length=0.05*magnitude, normalize=True
+                    color='green', length=magnitude / 9.81, normalize=True
                 )
 
             total_force = self.sum_of_forces()
@@ -314,7 +304,7 @@ class Dragon:
                 ax.quiver(
                     self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
                     total_force[0], total_force[1], total_force[2],
-                    color='red', length=0.05*magnitude, normalize=True
+                    color='blue', length=magnitude / 9.81, normalize=True
                 )
 
     def plot_plane(self, ax, size=2.0, z=0.0, color='gray', alpha=0.3):
