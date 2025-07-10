@@ -9,105 +9,89 @@ import numpy as np
 class Dragon:
 
     def __init__(self, urdf_path="dragon.urdf",
-                 start_pos = [0, 0, 3],
-                 start_orientation = [0, 0, 0]):
+                 start_pos = np.array([0, 0, 3]),
+                 start_orientation = np.array([0, 0, 0])):
 
+        ####### Setup PyBullet #######
         p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        p.setGravity(0, 0, -9.81)
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        p.loadURDF("plane.urdf")
 
+        ####### Load Robot #######
         start_orientation = p.getQuaternionFromEuler(start_orientation)
         self.robot_id = p.loadURDF(urdf_path, start_pos, start_orientation, useFixedBase=False)
-        p.setGravity(0, 0, -9.81)
 
-        p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        plane_id = p.loadURDF("plane.urdf")
+        ####### Kinematics Information #######
+        self.rotor_names = [p.getJointInfo(self.robot_id, i)[12].decode('utf-8') for i in range(p.getNumJoints(self.robot_id)) if "rotor" in p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()]
 
         self.num_links = p.getNumJoints(self.robot_id)
-        self.rotor_indices = [i + 1 for i in range(self.num_links) if "rotor" in p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()]
-        self.num_rotors = len(self.rotor_indices)
+        self.num_rotors = len(self.rotor_names)
         self.num_modules = int(self.num_rotors / 2)
-        self.center_of_gravity = [0.0, 0.0, 0.0]
-        self.link_positions = []
-        self.link_orientations = []
-        self.link_dimensions = []
-        self.link_names = []
+        self.kinematics = {}
+
+        ####### Dynamics Variables #######
         self.module_thrusts = []
-        self.total_mass = 0.0
         self.external_forces = []
+        self.center_of_gravity = np.zeros(3)
+        self.total_mass = 0.0
 
-        self._drawn_artists = []
+        self._drawn_artists = [] # For plotting
 
+        self.load_body_info()
         self.update_kinematics()
 
-    def update_kinematics(self):
-        self.total_mass = 0.0
-        weighted_com = [0.0, 0.0, 0.0]
-        self.link_positions = []
-        self.link_orientations = []
+    ####### Kinematics and Dynamics Methods #######
+    def load_body_info(self):
         self.link_dimensions = []
-        self.link_names = []
+        self.total_mass = 0.0
 
         for link_index in range(-1, self.num_links):
             dynamics = p.getDynamicsInfo(self.robot_id, link_index)
             mass = dynamics[0]
 
             if link_index == -1:
-                pos, orn = p.getBasePositionAndOrientation(self.robot_id)
                 name = p.getBodyInfo(self.robot_id)[1].decode('utf-8')
                 shape_data = []
             else:
-                pos, orn = p.getLinkState(self.robot_id, link_index, computeForwardKinematics=True)[0:2]
                 name = p.getJointInfo(self.robot_id, link_index)[12].decode('utf-8')
                 shape_data = p.getCollisionShapeData(self.robot_id, link_index)
 
-            self.link_positions.append(pos)
-            self.link_orientations.append(orn)
-            self.link_names.append(name)
+            self.kinematics[name] = {"index": link_index, "mass": mass}
+
             if shape_data and len(shape_data) > 0:
                 dims = shape_data[0][3]
-                self.link_dimensions.append([d for d in dims])
+                self.kinematics[name]["dimensions"] = [d for d in dims]
             else:
-                self.link_dimensions.append([0.3, 0.05, 0.05])
+                self.kinematics[name]["dimensions"] = np.array([0.3, 0.05, 0.05])
 
             if mass > 0:
-                weighted_com = [w + mass * c for w, c in zip(weighted_com, pos)]
                 self.total_mass += mass
 
+    def link_pos_orn(self, name_or_id):
+        idx = self._name_or_id(name_or_id)
+        if idx == -1:
+            pos, orn = p.getBasePositionAndOrientation(self.robot_id)
+            return np.array(pos), np.array(orn)
+        else:
+            pos, orn = p.getLinkState(self.robot_id, idx, computeForwardKinematics=True)[0:2]
+            return np.array(pos), np.array(orn)
+
+    def update_kinematics(self):
+        weighted_com = np.array([0.0, 0.0, 0.0])
+
+        for link_name, link_info in self.kinematics.items():
+            pos, orn = self.link_pos_orn(link_name)
+
+            self.kinematics[link_name]["position"] = np.array(pos)
+            self.kinematics[link_name]["orientation"] = np.array(orn)
+
+            mass = link_info["mass"]
+            weighted_com += mass * np.array(pos)
+
         if self.total_mass > 0:
-            self.center_of_gravity = [w / self.total_mass for w in weighted_com]
-
-    def set_joint_pos(self, name_or_id, value):
-        if isinstance(name_or_id, int):
-            p.setJointMotorControl2(self.robot_id, name_or_id, p.POSITION_CONTROL,
-                                    targetPosition=value,
-                                    force=1.0,
-                                    maxVelocity=1.0)
-        else:
-            name = name_or_id
-            for i in range(self.num_links):
-                joint_name = p.getJointInfo(self.robot_id, i)[12].decode('utf-8')
-                if name in joint_name:
-                    p.setJointMotorControl2(self.robot_id, i, p.POSITION_CONTROL,
-                                            targetPosition=value,
-                                            force=10.0,
-                                            maxVelocity=5.0)
-                    return
-            raise ValueError(f"Joint '{name}' not found.")
-
-    def reset_joint_pos(self, name_or_id, value=0.0):
-        if isinstance(name_or_id, int):
-            p.resetJointState(self.robot_id, name_or_id, targetValue=value)
-        else:
-            name = name_or_id
-            for i in range(self.num_links):
-                joint_name = p.getJointInfo(self.robot_id, i)[12].decode('utf-8')
-                if name in joint_name:
-                    p.resetJointState(self.robot_id, i, targetValue=value)
-                    return
-            raise ValueError(f"Joint '{name}' not found.")
-
-    def hover(self):
-        self.thrust([9.82 * self.total_mass / self.num_rotors] * self.num_rotors)
+            self.center_of_gravity = weighted_com / self.total_mass
 
     def module_thrust(self, module_index):
         if module_index < 1 or module_index > self.num_modules:
@@ -127,26 +111,40 @@ class Dragon:
             forces += np.array(force)
         return forces
 
+    ######## Control Methods #######
     def thrust(self, forces):
-        if len(self.rotor_indices) != len(forces):
+        if len(self.rotor_names) != len(forces):
             raise ValueError("Number of forces must match number of rotors.")
 
         self.external_forces.clear()
 
         self.module_thrusts = forces.copy()
 
-        for i, force in zip(self.rotor_indices, forces):
-            position = self.link_positions[i]
-            orientation = self.link_orientations[i]
-
-            # Local thrust direction in rotor frame
+        for rotor_name, force in zip(self.rotor_names, forces):
+            position = self.kinematics[rotor_name]["position"]
+            orientation = self.kinematics[rotor_name]["orientation"]
+            idx = self.kinematics[rotor_name]["index"]
             local_force = [0, 0, force]
+            world_force = np.array(p.rotateVector(orientation, local_force))
 
-            # Convert to world frame
-            world_force = p.rotateVector(orientation, local_force)
+            p.applyExternalForce(self.robot_id, idx, world_force, position, p.WORLD_FRAME)
 
             self.external_forces.append((position, world_force))
-            p.applyExternalForce(self.robot_id, i, world_force, position, p.WORLD_FRAME)
+
+    def set_joint_pos(self, name_or_id, value):
+        idx = self._name_or_id(name_or_id)
+        p.setJointMotorControl2(self.robot_id, idx, p.POSITION_CONTROL,
+                                targetPosition=value,
+                                force=10.0,
+                                maxVelocity=5.0)
+
+
+    def reset_joint_pos(self, name_or_id, value=0.0):
+        idx = self._name_or_id(name_or_id)
+        p.resetJointState(self.robot_id, idx, value)
+
+    def hover(self):
+        self.thrust([9.82 * self.total_mass / self.num_rotors] * self.num_rotors)
 
     def lock_joints(self):
         # Lock all joints to their current positions
@@ -158,25 +156,54 @@ class Dragon:
         self.update_kinematics()
         sleep(1/240)
 
-    def _get_color(self, link):
-        link = link.lower()
-        if "rotor" in link or link[0] == "f":
-            return "black"
-        if link[0] == "l" or link[0] == "g":
-            return "red"
-        return "blue"
+    def animate(self):
+        self._init_plot()
+        ani = FuncAnimation(self._fig, self._update_plot, interval=50)
+        plt.show()
 
-    def link_position(self, name_or_id):
-        if isinstance(name_or_id, int):
-            return np.array(p.getLinkState(self.robot_id, name_or_id)[0])
-        else:
-            for i in range(self.num_links):
-                joint_name = p.getJointInfo(self.robot_id, i)[12].decode('utf-8')
-                if name_or_id in joint_name:
-                    return np.array(p.getLinkState(self.robot_id, i)[0])
-            raise ValueError(f"Link '{name_or_id}' not found.")
+    def plot_on_ax(self, ax, CoG = True, forces = True):
+        for name, info in self.kinematics.items():
+            pos = info["position"]
+            orn = info["orientation"]
+            dims = info["dimensions"]
 
-    def draw_box(self, ax, pos, orn, dims, color):
+            if len(name) != 2:
+                continue
+
+            if name[0] == "L":
+                offset = [0.15, 0, 0]
+                offset = p.rotateVector(orn, offset)
+                pos = [pos[i] + offset[i] for i in range(3)]
+
+            if name[0] == "L" or name[0] == "F":
+                color = self._get_color(name)
+                self._draw_box(ax, pos, orn, dims, color)
+
+        cog = self.center_of_gravity
+
+        if CoG:
+            ax.scatter([cog[0]], [cog[1]], [cog[2]], color='g', s=100, label='Center of Gravity')
+
+        if forces:
+            for pos, force in self.external_forces:
+                magnitude = np.linalg.norm(force)
+                ax.quiver(
+                    pos[0], pos[1], pos[2],
+                    force[0], force[1], force[2],
+                    color='green', length=magnitude / 9.81, normalize=True
+                )
+
+            total_force = self.sum_of_forces()
+            magnitude = np.linalg.norm(total_force) / self.total_mass
+            if magnitude > 0:
+                ax.quiver(
+                    self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
+                    total_force[0], total_force[1], total_force[2],
+                    color='blue', length=magnitude / 9.81, normalize=True
+                )
+
+    ##### Private Methods #####
+    def _draw_box(self, ax, pos, orn, dims, color):
         rot_matrix = np.array(p.getMatrixFromQuaternion(orn)).reshape(3, 3)
         l, w, h = dims
         corners = np.array([
@@ -193,62 +220,65 @@ class Dragon:
         ax.add_collection3d(box)
         self._drawn_artists.append(box)
 
-    def init_plot(self):
-        self.fig = plt.figure(figsize=(20, 10))
-        self.ax_world = self.fig.add_subplot(121, projection='3d')
-        self.ax_robot = self.fig.add_subplot(122, projection='3d')
-        self.scatter_cog_world = self.ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
-        self.scatter_cog_robot = self.ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
+    def _init_plot(self):
+        self._fig = plt.figure(figsize=(20, 10))
+        self._ax_world = self._fig.add_subplot(121, projection='3d')
+        self._ax_robot = self._fig.add_subplot(122, projection='3d')
+        self._scatter_cog_world = self._ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
+        self._scatter_cog_robot = self._ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
 
-        self.plot_plane(self.ax_world)
-        self.ax_world.set_xlim([-2, 2])
-        self.ax_world.set_ylim([-2, 2])
-        self.ax_world.set_zlim([0, 5])
-        self.ax_world.set_xlabel('X')
-        self.ax_world.set_ylabel('Y')
-        self.ax_world.set_zlabel('Z')
-        self.ax_world.set_title('Flight Simulation')
+        self._plot_plane(self._ax_world)
+        self._ax_world.set_xlim([-2, 2])
+        self._ax_world.set_ylim([-2, 2])
+        self._ax_world.set_zlim([0, 5])
+        self._ax_world.set_xlabel('X')
+        self._ax_world.set_ylabel('Y')
+        self._ax_world.set_zlabel('Z')
+        self._ax_world.set_title('Flight Simulation')
 
-        self.ax_robot.set_xlim([-1, 1])
-        self.ax_robot.set_ylim([-1, 1])
-        self.ax_robot.set_zlim([-1, 1])
-        self.ax_robot.set_xlabel('X')
-        self.ax_robot.set_ylabel('Y')
-        self.ax_robot.set_zlabel('Z')
-        self.ax_robot.set_title('Forces')
+        self._ax_robot.set_xlim([-1, 1])
+        self._ax_robot.set_ylim([-1, 1])
+        self._ax_robot.set_zlim([-1, 1])
+        self._ax_robot.set_xlabel('X')
+        self._ax_robot.set_ylabel('Y')
+        self._ax_robot.set_zlabel('Z')
+        self._ax_robot.set_title('Forces')
 
-        self.box_artists = []
+        self._box_artists = []
 
-    def update_plot(self, frame):
+    def _update_plot(self, frame):
         for artist in self._drawn_artists:
             artist.remove()
         self._drawn_artists.clear()
 
-        for pos, orn, dims, name in zip(self.link_positions, self.link_orientations, self.link_dimensions, self.link_names):
+        for name, info in self.kinematics.items():
+            pos = info["position"]
+            orn = info["orientation"]
+            dims = info["dimensions"]
+
             if len(name) != 2:
                 continue
 
             if name[0] == "L":
                 offset = [0.15, 0, 0]
-                # rotate the offset vector to match the orientation of the link
                 offset = p.rotateVector(orn, offset)
                 pos = [pos[i] + offset[i] for i in range(3)]
 
             if name[0] == "L" or name[0] == "F":
                 color = self._get_color(name)
-                self.draw_box(self.ax_world, pos, orn, dims, color)
+                self._draw_box(self._ax_world, pos, orn, dims, color)
 
-                rel_pos = np.array(pos) - np.array(self.center_of_gravity)
-                self.draw_box(self.ax_robot, rel_pos, orn, dims, color)
+                rel_pos = pos - self.center_of_gravity
+                self._draw_box(self._ax_robot, rel_pos, orn, dims, color)
 
         cog = self.center_of_gravity
-        self.scatter_cog_world._offsets3d = ([cog[0]], [cog[1]], [cog[2]])
-        self.scatter_cog_robot._offsets3d = ([0], [0], [0])
+        self._scatter_cog_world._offsets3d = ([cog[0]], [cog[1]], [cog[2]])
+        self._scatter_cog_robot._offsets3d = ([0], [0], [0])
 
         for pos, force in self.external_forces:
-            rel_pos = np.array(pos) - np.array(self.center_of_gravity)
+            rel_pos = pos - self.center_of_gravity
             magnitude = np.linalg.norm(force)
-            arrow = self.ax_robot.quiver(
+            arrow = self._ax_robot.quiver(
                 rel_pos[0], rel_pos[1], rel_pos[2],
                 force[0], force[1], force[2],
                 color='green', length=magnitude / 9.81, normalize=True
@@ -257,57 +287,14 @@ class Dragon:
 
         total_force = self.sum_of_forces()
         magnitude = np.linalg.norm(total_force) / self.total_mass
-        arrow = self.ax_robot.quiver(
+        arrow = self._ax_robot.quiver(
             0, 0, 0,
             total_force[0], total_force[1], total_force[2],
             color='blue', length=magnitude / 9.81, normalize=True
         )
         self._drawn_artists.append(arrow)
 
-
-    def plot_on_ax(self, ax, CoG = True, forces = True):
-        cog = self.center_of_gravity
-
-        for pos, orn, dims, name in zip(self.link_positions, self.link_orientations, self.link_dimensions, self.link_names):
-            if len(name) != 2:
-                continue
-
-            if name[0] == "L":
-                offset = [0.15, 0, 0]
-                # rotate the offset vector to match the orientation of the link
-                offset = p.rotateVector(orn, offset)
-                pos = [pos[i] + offset[i] for i in range(3)]
-
-
-            if name[0] == "L" or name[0] == "F":
-                color = self._get_color(name)
-                rel_pos = np.array(pos)
-                self.draw_box(ax, rel_pos, orn, dims, color)
-
-        if CoG:
-            ax.scatter([cog[0]], [cog[1]], [cog[2]], color='g', s=100, label='Center of Gravity')
-
-
-        if forces:
-            for pos, force in self.external_forces:
-                rel_pos = np.array(pos)
-                magnitude = np.linalg.norm(force)
-                ax.quiver(
-                    rel_pos[0], rel_pos[1], rel_pos[2],
-                    force[0], force[1], force[2],
-                    color='green', length=magnitude / 9.81, normalize=True
-                )
-
-            total_force = self.sum_of_forces()
-            magnitude = np.linalg.norm(total_force) / self.total_mass
-            if magnitude > 0:
-                ax.quiver(
-                    self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
-                    total_force[0], total_force[1], total_force[2],
-                    color='blue', length=magnitude / 9.81, normalize=True
-                )
-
-    def plot_plane(self, ax, size=2.0, z=0.0, color='gray', alpha=0.3):
+    def _plot_plane(self, ax, size=2.0, z=0.0, color='gray', alpha=0.3):
         # Define the corners of the plane square
         corners = np.array([
             [-size, -size, z],
@@ -320,7 +307,20 @@ class Dragon:
         plane = Poly3DCollection([corners], color=color, alpha=alpha)
         ax.add_collection3d(plane)
 
-    def animate(self):
-        self.init_plot()
-        ani = FuncAnimation(self.fig, self.update_plot, interval=1000/60)
-        plt.show()
+    def _get_color(self, link):
+        link = link.lower()
+        if "rotor" in link or link[0] == "f":
+            return "black"
+                # rotate the offset vector to match the orientation of the link
+        if link[0] == "l" or link[0] == "g":
+            return "red"
+        return "blue"
+
+    def _name_or_id(self, name_or_id):
+        if isinstance(name_or_id, int):
+            return name_or_id
+        else:
+            try:
+                return self.kinematics[name_or_id]["index"]
+            except KeyError:
+                raise ValueError(f"Joint '{name_or_id}' not found.")
