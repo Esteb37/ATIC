@@ -86,12 +86,9 @@ for i in range(len(history)):
     ax.quiver(cog[0], cog[1], cog[2], history[i][2][0], history[i][2][1], history[i][2][2], color='red', alpha=0.5, label ="F3" if i == 0 else None)
     ax.quiver(cog[0], cog[1], cog[2], history[i][3][0], history[i][3][1], history[i][3][2], color='orange', alpha=0.5, label ="F4" if i == 0 else None)
 
-ax.quiver(cog[0], cog[1], cog[2], F_real[0], F_real[1], F_real[2], color='black', label='Real Force')
+ax.quiver(cog[0], cog[1], cog[2], F_real[0], F_real[1], F_real[2], color='black', label='Real Force', linewidth=10)
 
 ax.legend()
-ax.set_xlim([-0.5, 1.5])
-ax.set_ylim([-1, 1])
-ax.set_zlim([2, 4])
 
-dragon.plot_on_ax(ax, CoG=False, forces=True)
+dragon.plot_on_ax(ax, CoG=False, forces=False)
 plt.show()

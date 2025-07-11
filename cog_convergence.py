@@ -37,9 +37,7 @@ for i in range(20):
 # 3D plot
 fig = plt.figure()
 ax = fig.add_subplot(221, projection='3d')
-ax.set_xlim([-0.5, 1.5])
-ax.set_ylim([-1, 1])
-ax.set_zlim([2, 4])
+
 
 # plot history
 for i in range(len(history)):
@@ -59,7 +57,6 @@ ax2.plot(x, [h[2][0] for h in history], label='CoG3 X', color='red')
 ax2.plot(x, [h[3][0] for h in history], label='CoG4 X', color='orange')
 ax2.set_xlabel('Iteration')
 ax2.set_ylabel('X Position')
-ax2.set_ylim([0, 1])
 ax2.axhline(CoG_real[0], color='black', linestyle='--', label='Real CoG X')
 ax2.legend()
 ax3 = fig.add_subplot(223)
@@ -70,7 +67,7 @@ ax3.plot(x, [h[2][1] for h in history], label='CoG3 Y', color='red')
 ax3.plot(x, [h[3][1] for h in history], label='CoG4 Y', color='orange')
 ax3.set_xlabel('Iteration')
 ax3.set_ylabel('Y Position')
-ax3.set_ylim([0, 1])
+
 ax3.axhline(CoG_real[1], color='black', linestyle='--', label='Real CoG Y')
 ax3.legend()
 ax4 = fig.add_subplot(224)
@@ -81,7 +78,6 @@ ax4.plot(x, [h[2][2] for h in history], label='CoG3 Z', color='red')
 ax4.plot(x, [h[3][2] for h in history], label='CoG4 Z', color='orange')
 ax4.set_xlabel('Iteration')
 ax4.set_ylabel('Z Position')
-ax4.set_ylim([2, 4])
 ax4.axhline(CoG_real[2], color='black', linestyle='--', label='Real CoG Z')
 ax4.legend()
 
