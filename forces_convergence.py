@@ -33,62 +33,121 @@ u = np.array([p.rotateVector(dragon.link_orientation("F1"), b),
               p.rotateVector(dragon.link_orientation("F3"), b),
               p.rotateVector(dragon.link_orientation("F4"), b)])
 
+rel_positions = [dragon.link_position("F1") - dragon.center_of_gravity,
+                dragon.link_position("F2") - dragon.center_of_gravity,
+                dragon.link_position("F3") - dragon.center_of_gravity,
+                dragon.link_position("F4") - dragon.center_of_gravity]
+
+v = np.array([np.cross(rel_positions[0], u[0]),
+              np.cross(rel_positions[1], u[1]),
+              np.cross(rel_positions[2], u[2]),
+              np.cross(rel_positions[3], u[3])])
+
+
 F = [lamb[i] * u[i] for i in range(dragon.num_modules)]
+T = [lamb[i] * v[i] for i in range(dragon.num_modules)]
 
 F_real = dragon.sum_of_forces()
-history = []
+T_real = dragon.sum_of_torques()
+
+f_history = []
+t_history = []
 for i in range(20):
   F = A @ F
-  history.append(F.copy() * 4)
+  T = A @ T
+  f_history.append(F.copy() * 4)
+  t_history.append(T.copy() * 4)
 
 # 3D plot
 fig = plt.figure()
 ax = fig.add_subplot(221, projection='3d')
 
-
 ax2 = fig.add_subplot(222)
-x = np.arange(len(history))
-ax2.plot(x, [h[0][0] for h in history], label='CoG1 X', color='blue')
-ax2.plot(x, [h[1][0] for h in history], label='CoG2 X', color='green')
-ax2.plot(x, [h[2][0] for h in history], label='CoG3 X', color='red')
-ax2.plot(x, [h[3][0] for h in history], label='CoG4 X', color='orange')
+x = np.arange(len(f_history))
+ax2.plot(x, [h[0][0] for h in f_history], label='F1 X', color='blue')
+ax2.plot(x, [h[1][0] for h in f_history], label='F2 X', color='green')
+ax2.plot(x, [h[2][0] for h in f_history], label='F3 X', color='red')
+ax2.plot(x, [h[3][0] for h in f_history], label='F4 X', color='orange')
 ax2.set_xlabel('Iteration')
 ax2.set_ylabel('Fx magnitude')
 ax2.axhline(F_real[0], color='black', linestyle='--', label='Real CoG X')
 ax2.legend()
 ax3 = fig.add_subplot(223)
-ax3.plot(x, [h[0][1] for h in history], label='CoG1 Y', color='blue')
-ax3.plot(x, [h[1][1] for h in history], label='CoG2 Y', color='green')
-ax3.plot(x, [h[2][1] for h in history], label='CoG3 Y', color='red')
-ax3.plot(x, [h[3][1] for h in history], label='CoG4 Y', color='orange')
+ax3.plot(x, [h[0][1] for h in f_history], label='F1 Y', color='blue')
+ax3.plot(x, [h[1][1] for h in f_history], label='F2 Y', color='green')
+ax3.plot(x, [h[2][1] for h in f_history], label='F3 Y', color='red')
+ax3.plot(x, [h[3][1] for h in f_history], label='F4 Y', color='orange')
 ax3.set_xlabel('Iteration')
 ax3.set_ylabel('Fy magnitude')
 ax3.axhline(F_real[1], color='black', linestyle='--', label='Real CoG Y')
 ax3.legend()
 ax4 = fig.add_subplot(224)
-ax4.plot(x, [h[0][2] for h in history], label='CoG1 Z', color='blue')
-ax4.plot(x, [h[1][2] for h in history], label='CoG2 Z', color='green')
-ax4.plot(x, [h[2][2] for h in history], label='CoG3 Z', color='red')
-ax4.plot(x, [h[3][2] for h in history], label='CoG4 Z', color='orange')
+ax4.plot(x, [h[0][2] for h in f_history], label='F1 Z', color='blue')
+ax4.plot(x, [h[1][2] for h in f_history], label='F2 Z', color='green')
+ax4.plot(x, [h[2][2] for h in f_history], label='F3 Z', color='red')
+ax4.plot(x, [h[3][2] for h in f_history], label='F4 Z', color='orange')
 ax4.set_xlabel('Iteration')
 ax4.set_ylabel('Fz magnitude')
 ax4.axhline(F_real[2], color='black', linestyle='--', label='Real CoG Z')
 ax4.legend()
 
 F_real /= 9.81
-history = [[f / 9.81  for f in h] for h in history]
+f_history = [[f / 9.81  for f in h] for h in f_history]
 
 cog = dragon.center_of_gravity
 # plot history
-for i in range(len(history)):
-    ax.quiver(cog[0], cog[1], cog[2], history[i][0][0], history[i][0][1], history[i][0][2], color='blue', alpha=0.5, label ="F1" if i == 0 else None)
-    ax.quiver(cog[0], cog[1], cog[2], history[i][1][0], history[i][1][1], history[i][1][2], color='green', alpha=0.5, label ="F2" if i == 0 else None)
-    ax.quiver(cog[0], cog[1], cog[2], history[i][2][0], history[i][2][1], history[i][2][2], color='red', alpha=0.5, label ="F3" if i == 0 else None)
-    ax.quiver(cog[0], cog[1], cog[2], history[i][3][0], history[i][3][1], history[i][3][2], color='orange', alpha=0.5, label ="F4" if i == 0 else None)
+for i in range(len(f_history)):
+    ax.quiver(cog[0], cog[1], cog[2], f_history[i][0][0], f_history[i][0][1], f_history[i][0][2], color='blue', alpha=0.5, label ="F1" if i == 0 else None)
+    ax.quiver(cog[0], cog[1], cog[2], f_history[i][1][0], f_history[i][1][1], f_history[i][1][2], color='green', alpha=0.5, label ="F2" if i == 0 else None)
+    ax.quiver(cog[0], cog[1], cog[2], f_history[i][2][0], f_history[i][2][1], f_history[i][2][2], color='red', alpha=0.5, label ="F3" if i == 0 else None)
+    ax.quiver(cog[0], cog[1], cog[2], f_history[i][3][0], f_history[i][3][1], f_history[i][3][2], color='orange', alpha=0.5, label ="F4" if i == 0 else None)
 
 ax.quiver(cog[0], cog[1], cog[2], F_real[0], F_real[1], F_real[2], color='black', label='Real Force', linewidth=10)
 
 ax.legend()
 
 dragon.plot_on_ax(ax, CoG=False, forces=False)
+plt.show()
+
+# Plot torques
+fig2 = plt.figure()
+ax5 = fig2.add_subplot(221, projection='3d')
+
+ax6 = fig2.add_subplot(222)
+x = np.arange(len(t_history))
+ax6.plot(x, [h[0][0] for h in t_history], label='T1 X', color='blue')
+ax6.plot(x, [h[1][0] for h in t_history], label='T2 X', color='green')
+ax6.plot(x, [h[2][0] for h in t_history], label='T3 X', color='red')
+ax6.plot(x, [h[3][0] for h in t_history], label='T4 X', color='orange')
+ax6.set_xlabel('Iteration')
+ax6.set_ylabel('Tx magnitude')
+ax6.axhline(T_real[0], color='black', linestyle='--', label='Real CoG X')
+ax6.legend()
+ax7 = fig2.add_subplot(223)
+ax7.plot(x, [h[0][1] for h in t_history], label='T1 Y', color='blue')
+ax7.plot(x, [h[1][1] for h in t_history], label='T2 Y', color='green')
+ax7.plot(x, [h[2][1] for h in t_history], label='T3 Y', color='red')
+ax7.plot(x, [h[3][1] for h in t_history], label='T4 Y', color='orange')
+ax7.set_xlabel('Iteration')
+ax7.set_ylabel('Ty magnitude')
+ax7.axhline(T_real[1], color='black', linestyle='--', label='Real CoG Y')
+ax7.legend()
+ax8 = fig2.add_subplot(224)
+ax8.plot(x, [h[0][2] for h in t_history], label='T1 Z', color='blue')
+ax8.plot(x, [h[1][2] for h in t_history], label='T2 Z', color='green')
+ax8.plot(x, [h[2][2] for h in t_history], label='T3 Z', color='red')
+ax8.plot(x, [h[3][2] for h in t_history], label='T4 Z', color='orange')
+ax8.set_xlabel('Iteration')
+ax8.set_ylabel('Tz magnitude')
+ax8.axhline(T_real[2], color='black', linestyle='--', label='Real CoG Z')
+ax8.legend()
+# plot history
+for i in range(len(t_history)):
+    ax5.quiver(cog[0], cog[1], cog[2], t_history[i][0][0], t_history[i][0][1], t_history[i][0][2], color='blue', alpha=0.5, label ="T1" if i == 0 else None)
+    ax5.quiver(cog[0], cog[1], cog[2], t_history[i][1][0], t_history[i][1][1], t_history[i][1][2], color='green', alpha=0.5, label ="T2" if i == 0 else None)
+    ax5.quiver(cog[0], cog[1], cog[2], t_history[i][2][0], t_history[i][2][1], t_history[i][2][2], color='red', alpha=0.5, label ="T3" if i == 0 else None)
+    ax5.quiver(cog[0], cog[1], cog[2], t_history[i][3][0], t_history[i][3][1], t_history[i][3][2], color='orange', alpha=0.5, label ="T4" if i == 0 else None)
+ax5.quiver(cog[0], cog[1], cog[2], T_real[0], T_real[1], T_real[2], color='black', label='Real Torque', linewidth=10)
+ax5.legend()
+dragon.plot_on_ax(ax5, CoG=False, forces=False)
 plt.show()

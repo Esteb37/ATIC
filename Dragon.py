@@ -114,6 +114,13 @@ class Dragon:
             forces += np.array(force)
         return forces
 
+    def sum_of_torques(self):
+        torque = np.zeros(3)
+        for position, force in self.external_forces:
+            rel_pos = np.array(position) - self.center_of_gravity
+            torque += np.cross(rel_pos, force)
+        return torque
+
     def link_position(self, name_or_id):
         pos, _ = self.link_pos_orn(name_or_id)
         return np.array(pos)
@@ -221,12 +228,21 @@ class Dragon:
                 )
 
             total_force = self.sum_of_forces()
-            magnitude = np.linalg.norm(total_force) / self.total_mass
-            if magnitude > 0:
+            force_magnitude = np.linalg.norm(total_force) / self.total_mass
+            if force_magnitude > 0:
                 ax.quiver(
                     self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
                     total_force[0], total_force[1], total_force[2],
-                    color='black', length=magnitude / GRAVITY, normalize=True
+                    color='black', length=force_magnitude / GRAVITY, normalize=True
+                )
+
+            total_torque = self.sum_of_torques()
+            torque_magnitude = np.linalg.norm(total_torque)
+            if torque_magnitude > 0:
+                ax.quiver(
+                    self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
+                    total_torque[0], total_torque[1], total_torque[2],
+                    color='red', length=torque_magnitude / GRAVITY, normalize=True
                 )
 
     ##### Private Methods #####
@@ -313,13 +329,26 @@ class Dragon:
             self._drawn_artists.append(arrow)
 
         total_force = self.sum_of_forces()
-        magnitude = np.linalg.norm(total_force) / self.total_mass
-        arrow = self._ax_robot.quiver(
-            0, 0, 0,
-            total_force[0], total_force[1], total_force[2],
-            color='black', length=magnitude / GRAVITY, normalize=True
-        )
-        self._drawn_artists.append(arrow)
+        force_magnitude = np.linalg.norm(total_force) / self.total_mass
+        if force_magnitude > 0:
+            arrow = self._ax_robot.quiver(
+                0, 0, 0,
+                total_force[0], total_force[1], total_force[2],
+                color='black', length=force_magnitude / GRAVITY, normalize=True
+            )
+
+            self._drawn_artists.append(arrow)
+
+        total_torque = self.sum_of_torques()
+        torque_magnitude = np.linalg.norm(total_torque)
+        if torque_magnitude > 0:
+            arrow = self._ax_robot.quiver(
+                0, 0, 0,
+                total_torque[0], total_torque[1], total_torque[2],
+                color='red', length=torque_magnitude, normalize=True
+            )
+            self._drawn_artists.append(arrow)
+
 
     def _plot_plane(self, ax, size=2.0, z=0.0, color='gray', alpha=0.3):
         # Define the corners of the plane square
