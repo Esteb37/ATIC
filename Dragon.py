@@ -85,7 +85,6 @@ class Dragon:
 
         for link_name, link_info in self.kinematics.items():
             pos, orn = self.link_pos_orn(link_name)
-
             self.kinematics[link_name]["position"] = np.array(pos)
             self.kinematics[link_name]["orientation"] = np.array(orn)
 
@@ -123,6 +122,22 @@ class Dragon:
         _, orn = self.link_pos_orn(name_or_id)
         return np.array(orn)
 
+    def module_cog(self, module_index):
+
+        if module_index < 1 or module_index > self.num_modules:
+            raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
+        total_mass = 0
+        com = np.array([0.0, 0.0, 0.0])
+        for link in self.kinematics:
+            if str(module_index) in link:
+                link_info = self.kinematics[link]
+                total_mass += link_info["mass"]
+                com += link_info["mass"] * link_info["position"]
+        if total_mass > 0:
+            com /= total_mass
+
+        return com
+
     ######## Control Methods #######
     def thrust(self, forces):
         if len(self.rotor_names) != len(forces):
@@ -156,7 +171,7 @@ class Dragon:
         p.resetJointState(self.robot_id, idx, value)
 
     def hover(self):
-        self.thrust([9.82 * self.total_mass / self.num_rotors] * self.num_rotors)
+        self.thrust([GRAVITY * self.total_mass / self.num_rotors] * self.num_rotors)
 
     def lock_joints(self):
         # Lock all joints to their current positions
@@ -202,7 +217,7 @@ class Dragon:
                 ax.quiver(
                     pos[0], pos[1], pos[2],
                     force[0], force[1], force[2],
-                    color='green', length=magnitude / GRAVITY, normalize=True
+                    color='green', length=magnitude / GRAVITY * self.num_rotors, normalize=True
                 )
 
             total_force = self.sum_of_forces()
@@ -293,7 +308,7 @@ class Dragon:
             arrow = self._ax_robot.quiver(
                 rel_pos[0], rel_pos[1], rel_pos[2],
                 force[0], force[1], force[2],
-                color='green', length=magnitude / GRAVITY, normalize=True
+                color='green', length=magnitude / GRAVITY * self.num_rotors, normalize=True
             )
             self._drawn_artists.append(arrow)
 
@@ -302,7 +317,7 @@ class Dragon:
         arrow = self._ax_robot.quiver(
             0, 0, 0,
             total_force[0], total_force[1], total_force[2],
-            color='blue', length=magnitude / GRAVITY, normalize=True
+            color='black', length=magnitude / GRAVITY, normalize=True
         )
         self._drawn_artists.append(arrow)
 

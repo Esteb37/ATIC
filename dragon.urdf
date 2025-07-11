@@ -3,7 +3,7 @@
   <link name="L1">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -15,7 +15,7 @@
   <link name="joint1_yaw_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
     <collision name="joint1_body">
@@ -45,7 +45,7 @@
   <link name="joint1_pitch_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -62,16 +62,15 @@
   <link name="L2">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
 
-  <!-- yaw between L2 and pitch link -->
   <link name="joint2_yaw_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
     <collision name="joint2_body">
@@ -101,7 +100,7 @@
   <link name="joint2_pitch_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -118,7 +117,7 @@
   <link name="L3">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -126,7 +125,7 @@
   <link name="joint3_yaw_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
     <collision name="joint3_body">
@@ -155,7 +154,7 @@
   <link name="joint3_pitch_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -172,7 +171,7 @@
   <link name="L4">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.01"/>
+      <mass value="0.000000000000000001"/>
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
@@ -269,8 +268,6 @@
     <child  link="L1_rotor_R"/>
     <origin xyz="0 -0.15 0" rpy="0 0 0"/>
   </joint>
-
-
 
   <link name="G2">
     <inertial>

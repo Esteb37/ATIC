@@ -18,10 +18,10 @@ A = np.array([
                 [0,   0,   1/3, 2/3]
             ])
 
-G = np.array([dragon.link_position("G1"),
-              dragon.link_position("G2"),
-              dragon.link_position("G3"),
-              dragon.link_position("G4")])
+G = np.array([dragon.module_cog(1),
+              dragon.module_cog(2),
+              dragon.module_cog(3),
+              dragon.module_cog(4)])
 
 CoG_real = dragon.center_of_gravity
 
