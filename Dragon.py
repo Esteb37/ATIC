@@ -208,7 +208,7 @@ class Dragon:
         p.setJointMotorControl2(self.robot_id, idx, p.POSITION_CONTROL,
                                 targetPosition=value,
                                 force=10.0,
-                                maxVelocity=5.0)
+                                maxVelocity=1.0)
 
     def set_joint_vel(self, name_or_id, value):
         idx = self._get_id(name_or_id)
@@ -325,7 +325,7 @@ class Dragon:
         self._scatter_cog_robot = self._ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
 
         self._plot_plane(self._ax_world)
-        self._ax_world.set_xlim([-2, 2])
+        self._ax_world.set_xlim([-2, 5])
         self._ax_world.set_ylim([-2, 2])
         self._ax_world.set_zlim([0, 5])
         self._ax_world.set_xlabel('X')
