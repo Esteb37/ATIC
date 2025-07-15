@@ -9,24 +9,24 @@ dragon.reset_joint_pos("joint1_pitch",-1)
 dragon.reset_joint_pos("joint2_yaw", 1)
 dragon.reset_joint_pos("joint3_pitch",-1)
 dragon.reset_joint_pos("joint2_pitch", -1)
-dragon.step()
 dragon.hover()
+dragon.step()
 
+MODULE = 4
 
 # Constants
-F_G_z = np.linalg.norm(dragon.link_position("F4") - dragon.link_position("G4"))
+F_G_z = np.linalg.norm(dragon.link_position("F"+str(MODULE)) - dragon.link_position("G"+str(MODULE)))
 e_z = np.array([0, 0, 1])
 
-R_ri = np.array(p.getMatrixFromQuaternion(dragon.module_orientation(4))).reshape(3, 3)  # Rotation matrix of the module
-r_ri = dragon.module_position(4)  # Position of the module in inertial frame
-center_of_gravity = dragon.module_com(4)  # Center of gravity of the robot
+R_ri = np.array(p.getMatrixFromQuaternion(dragon.module_orientation(MODULE))).reshape(3, 3)  # Rotation matrix of the module
+r_ri = dragon.module_position(MODULE)  # Position of the module in inertial frame
 
 W_hist = []  # History of wrenches
 
 # Current state
-phi_i = dragon.get_joint_pos("G4")  # roll
-theta_i = dragon.get_joint_pos("F4")  # pitch
-lambda_i = dragon.module_thrust(4)  # thrust force
+phi_i = dragon.get_joint_pos("G"+str(MODULE))  # roll
+theta_i = dragon.get_joint_pos("F"+str(MODULE))  # pitch
+lambda_i = dragon.module_thrust(MODULE)  # thrust force
 
 # Desired total wrench change
 W_star = np.array([0, 0, 9.81 * dragon.total_mass / dragon.num_modules, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
@@ -47,12 +47,24 @@ for i in range(100):
   # u_i: thrust direction
   u_i = R_ri @ R_phi @ R_theta @ e_z
 
+  vec_transform = np.eye(4)
+  vec_transform[2, 3] = F_G_z
+
+  imu_transform = np.eye(4)
+  imu_transform[:3, 3] = r_ri
+  imu_transform[:3, :3] = R_ri
+
+  roll_transform = np.eye(4)
+  roll_transform[:3, :3] = R_phi
+
   # p_i: from CoG to thrust point
-  p_i = r_ri + R_ri @ R_phi @ np.array([0, 0, F_G_z])
+  p_i = imu_transform @ roll_transform @ vec_transform @ np.array([0, 0, 0, 1])
+  p_i = p_i[:3]
+  v_i = np.cross(p_i, u_i)
 
   # Force and torque
   f_i = lambda_i * u_i
-  tau_i = np.cross(p_i, f_i)
+  tau_i = lambda_i * v_i
 
   W_i =  np.concatenate([f_i, tau_i])  # shape (6,)
 
@@ -107,6 +119,10 @@ for i in range(100):
   prob = cp.Problem(cp.Minimize(cp.sum_squares(residual)))
   prob.solve()
 
+  dragon.set_joint_vel("G"+str(MODULE), dx.value[0])  # Set roll velocity
+  dragon.set_joint_vel("F"+str(MODULE), dx.value[1])  # Set pitch velocity
+  dragon.set_module_thrust(MODULE, lambda_i + dx.value[2])  # Set thrust force
+
   # Update state
   phi_i += dx.value[0]
   theta_i += dx.value[1]
@@ -116,12 +132,14 @@ for i in range(100):
 
 # Plot history of each component with target in separate plots
 import matplotlib.pyplot as plt
+
+names = ["fx", "fy", "fz", "tx", "ty", "tz"]
 plt.figure(figsize=(12, 8))
 for i in range(6):
     plt.subplot(3, 2, i + 1)
-    plt.plot([w[i] for w in W_hist], label='W_i component ' + str(i))
+    plt.plot([w[i] for w in W_hist], label=names[i])
     plt.axhline(W_star[i], color='red', linestyle='--', label='Target')
-    plt.title('Wrench Component ' + str(i))
+    plt.title(f'Component {names[i]} over iterations')
     plt.xlabel('Iteration')
     plt.ylabel('Value')
     plt.legend()
