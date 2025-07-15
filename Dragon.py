@@ -18,7 +18,6 @@ class Dragon:
         p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -GRAVITY)
-        p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.loadURDF("plane.urdf")
 
         ####### Load Robot #######
@@ -129,8 +128,7 @@ class Dragon:
         _, orn = self.link_pos_orn(name_or_id)
         return np.array(orn)
 
-    def module_cog(self, module_index):
-
+    def module_com(self, module_index):
         if module_index < 1 or module_index > self.num_modules:
             raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
         total_mass = 0
@@ -144,6 +142,22 @@ class Dragon:
             com /= total_mass
 
         return com
+
+    def module_position(self, module_index):
+        if module_index < 1 or module_index > self.num_modules:
+            raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
+        return self.link_position("G" + str(module_index))
+
+    def module_orientation(self, module_index):
+        if module_index < 1 or module_index > self.num_modules:
+            raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
+
+        link_name = "L" + str(module_index)
+        if link_name not in self.kinematics:
+            raise ValueError(f"Module {module_index} does not have a corresponding link.")
+        orn = self.kinematics[link_name]["orientation"]
+
+        return np.array(orn)
 
     ######## Control Methods #######
     def thrust(self, forces):
@@ -172,6 +186,9 @@ class Dragon:
                                 force=10.0,
                                 maxVelocity=5.0)
 
+    def get_joint_pos(self, name_or_id):
+        idx = self._get_id(name_or_id)
+        return p.getJointState(self.robot_id, idx)[0]
 
     def reset_joint_pos(self, name_or_id, value=0.0):
         idx = self._get_id(name_or_id)

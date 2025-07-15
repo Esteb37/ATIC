@@ -18,15 +18,14 @@ A = np.array([
                 [0,   0,   1/3, 2/3]
             ])
 
-G = np.array([dragon.module_cog(1),
-              dragon.module_cog(2),
-              dragon.module_cog(3),
-              dragon.module_cog(4)])
+G = np.array([dragon.module_com(1),
+              dragon.module_com(2),
+              dragon.module_com(3),
+              dragon.module_com(4)])
 
 CoG_real = dragon.center_of_gravity
 
 CoG = G.copy()
-w = np.ones(dragon.num_modules)
 
 history = []
 for i in range(20):
@@ -37,7 +36,6 @@ for i in range(20):
 # 3D plot
 fig = plt.figure()
 ax = fig.add_subplot(221, projection='3d')
-
 
 # plot history
 for i in range(len(history)):

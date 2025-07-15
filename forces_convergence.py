@@ -21,22 +21,73 @@ A = np.array([
 
 w = np.ones(dragon.num_modules)
 
-b = np.array([0, 0, 1])
+ez = np.array([0, 0, 1])
 
 lamb = np.array([dragon.module_thrust(1),
                  dragon.module_thrust(2),
                  dragon.module_thrust(3),
                  dragon.module_thrust(4)])
 
-u = np.array([p.rotateVector(dragon.link_orientation("F1"), b),
-              p.rotateVector(dragon.link_orientation("F2"), b),
-              p.rotateVector(dragon.link_orientation("F3"), b),
-              p.rotateVector(dragon.link_orientation("F4"), b)])
+F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 
-rel_positions = [dragon.link_position("F1") - dragon.center_of_gravity,
-                dragon.link_position("F2") - dragon.center_of_gravity,
-                dragon.link_position("F3") - dragon.center_of_gravity,
-                dragon.link_position("F4") - dragon.center_of_gravity]
+def R_i(module):
+    link_orientation = dragon.module_orientation(module + 1)
+
+    base = np.array(p.getMatrixFromQuaternion(link_orientation)).reshape(3, 3)
+
+    phi = dragon.get_joint_pos("G" + str(module + 1))
+    theta = dragon.get_joint_pos("F" + str(module + 1))
+
+    # Roll with phi
+    cp = np.cos(phi)
+    sp = np.sin(phi)
+    roll = np.array([[1, 0, 0],
+                    [0, cp, -sp],
+                    [0, sp, cp]])
+
+    # Pitch with theta
+    ct = np.cos(theta)
+    st = np.sin(theta)
+    pitch = np.array([[ct, 0, st],
+                    [0, 1, 0],
+                    [-st, 0, ct]])
+
+    return  base @ roll @ pitch
+
+R = np.array([R_i(i) for i in range(dragon.num_modules)])
+
+u = np.array([rot @ ez for rot in R])
+
+def T_i(module):
+    module_pos = dragon.module_position(module + 1)
+    module_orn = dragon.module_orientation(module + 1)
+
+    imu_transform = np.eye(4)
+    imu_transform[:3, 3] = module_pos
+    imu_transform[:3, :3] = np.array(p.getMatrixFromQuaternion(module_orn)).reshape(3, 3)
+
+    vec_transform = np.eye(4)
+    vec_transform[2, 3] = F_G_z
+
+    # Roll with phi
+    phi = dragon.get_joint_pos("G" + str(module + 1))
+    cp = np.cos(phi)
+    sp = np.sin(phi)
+
+    roll_transform = np.eye(4)
+    roll_transform[:3, :3] = np.array([[1, 0, 0],
+                                    [0, cp, -sp],
+                                    [0, sp, cp]])
+
+
+    transform = imu_transform @ roll_transform @ vec_transform
+
+    return transform
+
+def rel_pos(module):
+    return (T_i(module) @ np.array([0, 0, 0, 1]))[:3] - dragon.center_of_gravity
+
+rel_positions = [rel_pos(i) for i in range(dragon.num_modules)]
 
 v = np.array([np.cross(rel_positions[0], u[0]),
               np.cross(rel_positions[1], u[1]),
@@ -55,8 +106,8 @@ t_history = []
 for i in range(20):
   F = A @ F
   T = A @ T
-  f_history.append(F.copy() * 4)
-  t_history.append(T.copy() * 4)
+  f_history.append(F.copy() * dragon.num_modules)
+  t_history.append(T.copy() * dragon.num_modules)
 
 # 3D plot
 fig = plt.figure()
