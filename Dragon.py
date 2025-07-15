@@ -120,6 +120,12 @@ class Dragon:
             torque += np.cross(rel_pos, force)
         return torque
 
+    def wrench(self):
+        forces = self.sum_of_forces()
+        torques = self.sum_of_torques()
+
+        return np.concatenate((forces, torques))
+
     def link_position(self, name_or_id):
         pos, _ = self.link_pos_orn(name_or_id)
         return np.array(pos)
@@ -185,6 +191,12 @@ class Dragon:
                                 targetPosition=value,
                                 force=10.0,
                                 maxVelocity=5.0)
+
+    def set_joint_vel(self, name_or_id, value):
+        idx = self._get_id(name_or_id)
+        p.setJointMotorControl2(self.robot_id, idx, p.VELOCITY_CONTROL,
+                                targetVelocity=value,
+                                force=10.0)
 
     def get_joint_pos(self, name_or_id):
         idx = self._get_id(name_or_id)
