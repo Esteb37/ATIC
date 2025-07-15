@@ -10,7 +10,6 @@ dragon = Dragon.Dragon()
 dragon.set_joint_pos("joint1_pitch",-1.5)
 dragon.set_joint_pos("joint2_pitch", 1.5)
 dragon.set_joint_pos("joint3_pitch", 1.5)
-"""dragon.reset_joint_pos("joint3_yaw",1)"""
 dragon.hover()
 dragon.step()
 
@@ -179,10 +178,9 @@ def sim_loop(dragon: Dragon):
 
     dragon.step()
     dragon.thrust([lam[3] / 2, lam[3] / 2, lam[2] / 2, lam[2] / 2,
-                  lam[0] / 2, lam[0] / 2, lam[0] / 2, lam[0] / 2,])
+                  lam[1] / 2, lam[1] / 2, lam[0] / 2, lam[0] / 2,])
 
 def main():
-  input()
   threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
   dragon.animate()
 

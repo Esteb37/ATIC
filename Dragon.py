@@ -121,6 +121,21 @@ class Dragon:
 
         return force
 
+    def module_torque(self, module_index):
+        force = self.module_force(module_index)
+        position = self.link_position("F" + str(module_index)) - self.module_com(module_index)
+        torque = np.cross(position, force)
+        return torque
+
+    def module_wrench(self, module_index):
+        if module_index < 1 or module_index > self.num_modules:
+            raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
+
+        force = self.module_force(module_index)
+        torque = self.module_torque(module_index)
+
+        return np.concatenate((force, torque))
+
     def sum_of_forces(self):
         forces = np.zeros(3)
         for _, force in self.external_forces:

@@ -3,14 +3,14 @@ import cvxpy as cp
 import Dragon as Dragon
 import pybullet as p
 import threading
+import matplotlib.pyplot as plt
 
 np.set_printoptions(precision=4, suppress=True)
 
 dragon = Dragon.Dragon()
-dragon.set_joint_pos("joint1_pitch",-1.5)
-dragon.set_joint_pos("joint2_pitch", 1.5)
-dragon.set_joint_pos("joint3_pitch", 1.5)
-"""dragon.reset_joint_pos("joint3_yaw",1)"""
+dragon.reset_joint_pos("joint1_pitch",-1.5)
+dragon.reset_joint_pos("joint2_pitch", 1.5)
+dragon.reset_joint_pos("joint3_pitch", 1.5)
 dragon.hover()
 dragon.step()
 
@@ -18,195 +18,180 @@ dragon.step()
 F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
-A = np.array([[2/3, 1/3, 0,   0  ],
-              [1/3, 1/3, 1/3, 0  ],
-              [0,   1/3, 1/3, 1/3],
-              [0,   0,   1/3, 2/3]])
-
 # Desired total wrench change
-W_star = np.array([1, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([0.2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
-N = dragon.num_modules  # Number of modules
-W_hat = [np.zeros(6) for _ in range(N)]
-r_CoG_hat = [np.zeros(3) for _ in range(N)]
-dual_W = [np.zeros(6) for _ in range(N)]
-dual_CoG = [np.zeros(3) for _ in range(N)]
-rho = 1.0
+alpha = 1
+beta = 1
+rho = 1
+
+Adj = np.array([
+                  [2/3, 1/3, 0,   0  ],
+                  [1/3, 1/3, 1/3, 0  ],
+                  [0,   1/3, 1/3, 1/3],
+                  [0,   0,   1/3, 2/3]
+              ])
+
+ADMM_ITERATIONS = 100
+
+def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
+    R_ri = np.array(p.getMatrixFromQuaternion(dragon.module_orientation(MODULE))).reshape(3, 3)  # Rotation matrix of the module
+    r_ri = dragon.module_position(MODULE)  # Position of the module in inertial frame
+
+    cp_phi, sp_phi = np.cos(phi), np.sin(phi)
+    cp_theta, sp_theta = np.cos(theta), np.sin(theta)
+
+    # Rotation matrices
+    R_phi = np.array([[1, 0, 0],
+                      [0, cp_phi, -sp_phi],
+                      [0, sp_phi, cp_phi]])
+
+    R_theta = np.array([[cp_theta, 0, sp_theta],
+                        [0, 1, 0],
+                        [-sp_theta, 0, cp_theta]])
+
+    # u: thrust direction
+    u = R_ri @ R_phi @ R_theta @ e_z
+
+    vec_transform = np.eye(4)
+    vec_transform[2, 3] = F_G_z
+
+    imu_transform = np.eye(4)
+    imu_transform[:3, 3] = r_ri
+    imu_transform[:3, :3] = R_ri
+
+    roll_transform = np.eye(4)
+    roll_transform[:3, :3] = R_phi
+
+    # pos: from CoG to thrust point
+    pos = imu_transform @ roll_transform @ vec_transform @ np.array([0, 0, 0, 1])
+    pos = pos[:3] - dragon.center_of_gravity
+    v = np.cross(pos, u)
+
+    # Force and torque
+    f = lamb * u
+    tau = lamb * v
+
+    W =  np.concatenate([f, tau])  # shape (6,)
+
+    # === Jacobians ===
+
+    # dR_phi/dphi
+    dR_phi_dphi = np.array([[0, 0, 0],
+                            [0, -sp_phi, -cp_phi],
+                            [0, cp_phi, -sp_phi]])
+
+    # dR_theta/dtheta
+    dR_theta_dtheta = np.array([[-sp_theta, 0, cp_theta],
+                                [0, 0, 0],
+                                [-cp_theta, 0, -sp_theta]])
+
+    # df/dphi
+    du_dphi = R_ri @ dR_phi_dphi @ R_theta @ e_z
+    df_dphi = lamb * du_dphi
+
+    # df/dtheta
+    du_dtheta = R_ri @ R_phi @ dR_theta_dtheta @ e_z
+    df_dtheta = lamb * du_dtheta
+
+    # df/dlambda
+    df_dlambda = u
+
+    # dtau/dphi
+    dtau_dphi = np.cross(pos, df_dphi)
+
+    # dtau/dtheta
+    dtau_dtheta = np.cross(pos, df_dtheta)
+
+    # dtau/dlambda
+    dtau_dlambda = np.cross(pos, df_dlambda)
+
+    # === Assemble A ===
+
+    A = np.block([
+        [df_dphi.reshape(3,1), df_dtheta.reshape(3,1), df_dlambda.reshape(3,1)],
+        [dtau_dphi.reshape(3,1), dtau_dtheta.reshape(3,1), dtau_dlambda.reshape(3,1)]
+    ])  # shape (6, 3)
+
+    # CVX Problem Setup
+
+    dx = cp.Variable(3)
+
+    track_cost = alpha / 2 * cp.sum_squares(dragon.num_modules * z_W - W_star)
+    effort_cost = beta / 2 * cp.sum_squares(dx)
+    cons_cost = rho / 2 * cp.sum_squares((W + A @ dx) - z_W + dual_W)
+
+    cost = track_cost + cons_cost
+
+    constraints = []
+    constraints.append(phi + dx[0] >= -np.pi / 2)  # phi >= -90 degrees
+    constraints.append(phi + dx[0] <= np.pi / 2)   # phi <= 90 degrees
+    constraints.append(theta + dx[1] >= -np.pi / 2)  # theta >= -90 degrees
+    constraints.append(theta + dx[1] <= np.pi / 2)   # theta <= 90 degrees
+    constraints.append(lamb + dx[2] >= 0)  # lambda >= 0
+    constraints.append(lamb + dx[2] <= 10)  # lambda <= 10 N
+
+    prob = cp.Problem(cp.Minimize(cost), constraints)
+
+    return prob, W, A, dx
+
+
+def solve_admm(dragon : Dragon):
+  dual_W = np.zeros((dragon.num_modules, 6))  # Dual variables for wrenches
+  z_W = [dragon.module_wrench(i + 1) for i in range(dragon.num_modules)]  # Initial wrenches
+
+
+
+  updated_W = np.zeros((dragon.num_modules, 6))  # Updated wrenches
+
+  varis = []
+
+  for MODULE in range(1, dragon.num_modules + 1):
+    phi = dragon.get_joint_pos("G"+str(MODULE))  # roll
+    theta = dragon.get_joint_pos("F"+str(MODULE))  # pitch
+    lamb = dragon.module_thrust(MODULE)  # thrust force
+
+    varis .append((phi, theta, lamb))
+
+  for _ in range(ADMM_ITERATIONS):
+
+    probs = []
+
+    for i in range(dragon.num_modules):
+      phi, theta, lamb = varis[i]
+      probs.append(module_problem(i + 1, phi, theta, lamb, dual_W[i], z_W[i]))
+
+    for i in range(dragon.num_modules):
+      problem, current_W, A, dx = probs[i]
+      problem.solve()
+
+      updated_W[i] = current_W + A @ dx.value
+
+      varis[i] = (varis[i][0] + dx.value[0], varis[i][1] + dx.value[1], varis[i][2] + dx.value[2])
+
+    z_W = Adj @ (updated_W + dual_W)
+    dual_W += updated_W - z_W
+
+  dragon.reset_joint_pos("G1", varis[0][0])
+  dragon.reset_joint_pos("G2", varis[1][0])
+  dragon.reset_joint_pos("G3", varis[2][0])
+  dragon.reset_joint_pos("G4", varis[3][0])
+  dragon.reset_joint_pos("F1", varis[0][1])
+  dragon.reset_joint_pos("F2", varis[1][1])
+  dragon.reset_joint_pos("F3", varis[2][1])
+  dragon.reset_joint_pos("F4", varis[3][1])
+
+  dragon.step()
+  dragon.thrust([varis[3][2] / 2, varis[3][2] / 2, varis[2][2] / 2, varis[2][2] / 2,
+                varis[1][2] / 2, varis[1][2] / 2, varis[0][2] / 2, varis[0][2] / 2,])
 
 def sim_loop(dragon: Dragon):
-
-  k = 0
-
   while True:
-
-
-    if k % 20 == 0:
-      print("Iteration:", k)
-
-      phi = []
-      theta = []
-      lam = []
-
-      A = []
-      W = np.zeros(6)
-      dx = []
-
-      constraints = []
-
-      for MODULE in range(1, dragon.num_modules + 1):
-        phi_i = dragon.get_joint_pos("G"+str(MODULE))  # roll
-        theta_i = dragon.get_joint_pos("F"+str(MODULE))  # pitch
-        lambda_i = dragon.module_thrust(MODULE)  # thrust force
-
-        phi.append(phi_i)
-        theta.append(theta_i)
-        lam.append(lambda_i)
-
-        R_ri = np.array(p.getMatrixFromQuaternion(dragon.module_orientation(MODULE))).reshape(3, 3)  # Rotation matrix of the module
-        r_ri = dragon.module_position(MODULE)  # Position of the module in inertial frame
-
-        phi_i = phi[MODULE - 1]  # Roll angle of the module
-        theta_i = theta[MODULE - 1]  # Pitch angle of the module
-        lambda_i = lam[MODULE - 1]  # Thrust force of the module
-
-        cp_phi, sp_phi = np.cos(phi_i), np.sin(phi_i)
-        cp_theta, sp_theta = np.cos(theta_i), np.sin(theta_i)
-
-        # Rotation matrices
-        R_phi = np.array([[1, 0, 0],
-                          [0, cp_phi, -sp_phi],
-                          [0, sp_phi, cp_phi]])
-
-        R_theta = np.array([[cp_theta, 0, sp_theta],
-                            [0, 1, 0],
-                            [-sp_theta, 0, cp_theta]])
-
-        # u_i: thrust direction
-        u_i = R_ri @ R_phi @ R_theta @ e_z
-
-        vec_transform = np.eye(4)
-        vec_transform[2, 3] = F_G_z
-
-        imu_transform = np.eye(4)
-        imu_transform[:3, 3] = r_ri
-        imu_transform[:3, :3] = R_ri
-
-        roll_transform = np.eye(4)
-        roll_transform[:3, :3] = R_phi
-
-        # p_i: from CoG to thrust point
-        p_i = imu_transform @ roll_transform @ vec_transform @ np.array([0, 0, 0, 1])
-        p_i = p_i[:3] - dragon.center_of_gravity
-        v_i = np.cross(p_i, u_i)
-
-        # Force and torque
-        f_i = lambda_i * u_i
-        tau_i = lambda_i * v_i
-
-        W_i =  np.concatenate([f_i, tau_i])  # shape (6,)
-
-        # === Jacobians ===
-
-        # dR_phi/dphi
-        dR_phi_dphi = np.array([[0, 0, 0],
-                                [0, -sp_phi, -cp_phi],
-                                [0, cp_phi, -sp_phi]])
-
-        # dR_theta/dtheta
-        dR_theta_dtheta = np.array([[-sp_theta, 0, cp_theta],
-                                    [0, 0, 0],
-                                    [-cp_theta, 0, -sp_theta]])
-
-        # df/dphi
-        du_dphi = R_ri @ dR_phi_dphi @ R_theta @ e_z
-        df_dphi = lambda_i * du_dphi
-
-        # df/dtheta
-        du_dtheta = R_ri @ R_phi @ dR_theta_dtheta @ e_z
-        df_dtheta = lambda_i * du_dtheta
-
-        # df/dlambda
-        df_dlambda = u_i
-
-        # dtau/dphi
-        dtau_dphi = np.cross(p_i, df_dphi)
-
-        # dtau/dtheta
-        dtau_dtheta = np.cross(p_i, df_dtheta)
-
-        # dtau/dlambda
-        dtau_dlambda = np.cross(p_i, df_dlambda)
-
-        # === Assemble A_i ===
-
-        A_i = np.block([
-            [df_dphi.reshape(3,1), df_dtheta.reshape(3,1), df_dlambda.reshape(3,1)],
-            [dtau_dphi.reshape(3,1), dtau_dtheta.reshape(3,1), dtau_dlambda.reshape(3,1)]
-        ])  # shape (6, 3)
-
-        # === CVXPY problem ===
-
-        # Variables: delta phi, delta theta, delta lambda
-        dx_i = cp.Variable(3)
-
-        # Collect A_i and W_i
-        A.append(A_i)
-        dx.append(dx_i)
-        W += W_i  # Accumulate wrench
-
-      suma = np.zeros(6)
-
-      for i in range(N):
-        suma = A[i] @ dx[i] + suma  # Sum of all contributions
-
-      residual = W - W_star + suma  # Residual vector
-
-      cost = cp.sum_squares(residual)
-
-      # angle constraints
-      for i in range(dragon.num_modules):
-        constraints.append(phi[i] + dx[i][0] >= -np.pi / 2)  # phi >= -90 degrees
-        constraints.append(phi[i] + dx[i][0] <= np.pi / 2)   # phi <= 90 degrees
-        constraints.append(theta[i] + dx[i][1] >= -np.pi / 2)  # theta >= -90 degrees
-        constraints.append(theta[i] + dx[i][1] <= np.pi / 2)   # theta <= 90 degrees
-        constraints.append(lam[i] + dx[i][2] >= 0)  # lambda >= 0
-        constraints.append(lam[i] + dx[i][2] <= 10)  # lambda <= 10 N
-      # thrust constraints
-      for i in range(dragon.num_modules):
-        constraints.append(lam[i] + dx[i][2] >= 0)  # thrust >= 0
-        constraints.append(lam[i] + dx[i][2] <= 10)  # thrust <= 10 N
-
-      prob = cp.Problem(cp.Minimize(cost), constraints)
-      prob.solve()
-
-      for i in range(dragon.num_modules):
-        # Update angles and thrusts
-        phi[i] += dx[i][0].value
-        theta[i] += dx[i][1].value
-        lam[i] += dx[i][2].value
-
-      W_hist.append(W.copy())
-
-      dragon.reset_joint_pos("G1", phi[0])
-      dragon.reset_joint_pos("G2", phi[1])
-      dragon.reset_joint_pos("G3", phi[2])
-      dragon.reset_joint_pos("G4", phi[3])
-      dragon.reset_joint_pos("F1", theta[0])
-      dragon.reset_joint_pos("F2", theta[1])
-      dragon.reset_joint_pos("F3", theta[2])
-      dragon.reset_joint_pos("F4", theta[3])
-
-    k += 1
-
     dragon.step()
-    dragon.thrust([lam[3] / 2, lam[3] / 2, lam[2] / 2, lam[2] / 2,
-                  lam[0] / 2, lam[0] / 2, lam[0] / 2, lam[0] / 2,])
-
-
+    solve_admm(dragon)
 
 def main():
-  input()
   threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
   dragon.animate()
 
