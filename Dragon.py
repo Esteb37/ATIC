@@ -107,6 +107,20 @@ class Dragon:
 
         return thrust
 
+    def module_force(self, module_index):
+        if module_index < 1 or module_index > self.num_modules:
+            raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
+
+        rotor_index_r = (module_index - 1) * 2
+        rotor_index_l = rotor_index_r + 1
+
+        force_right = np.array(self.external_forces[rotor_index_r][1])
+        force_left = np.array(self.external_forces[rotor_index_l][1])
+
+        force = force_right + force_left
+
+        return force
+
     def sum_of_forces(self):
         forces = np.zeros(3)
         for _, force in self.external_forces:
@@ -145,6 +159,7 @@ class Dragon:
                 total_mass += link_info["mass"]
                 com += link_info["mass"] * link_info["position"]
         if total_mass > 0:
+
             com /= total_mass
 
         return com
@@ -167,6 +182,9 @@ class Dragon:
 
     ######## Control Methods #######
     def thrust(self, forces):
+
+        self.update_kinematics()
+
         if len(self.rotor_names) != len(forces):
             raise ValueError("Number of forces must match number of rotors.")
 
@@ -225,6 +243,11 @@ class Dragon:
         plt.show()
 
     def plot_on_ax(self, ax, CoG = True, forces = True):
+
+        ax.set_xlim([-0.5, 1])
+        ax.set_ylim([-0.5, 1])
+        ax.set_zlim([0, 4])
+
         for name, info in self.kinematics.items():
             pos = info["position"]
             orn = info["orientation"]

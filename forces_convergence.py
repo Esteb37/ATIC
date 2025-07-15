@@ -104,7 +104,6 @@ if __name__ == "__main__":
     F_real = dragon.sum_of_forces()
     T_real = dragon.sum_of_torques()
 
-
     f_history = []
     t_history = []
     for i in range(20):
