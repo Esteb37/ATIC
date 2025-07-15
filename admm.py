@@ -18,10 +18,21 @@ dragon.step()
 F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
+A = np.array([[2/3, 1/3, 0,   0  ],
+              [1/3, 1/3, 1/3, 0  ],
+              [0,   1/3, 1/3, 1/3],
+              [0,   0,   1/3, 2/3]])
+
 # Desired total wrench change
-W_star = np.array([0.2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([1, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
+N = dragon.num_modules  # Number of modules
+W_hat = [np.zeros(6) for _ in range(N)]
+r_CoG_hat = [np.zeros(3) for _ in range(N)]
+dual_W = [np.zeros(6) for _ in range(N)]
+dual_CoG = [np.zeros(3) for _ in range(N)]
+rho = 1.0
 
 def sim_loop(dragon: Dragon):
 
@@ -29,19 +40,17 @@ def sim_loop(dragon: Dragon):
 
   while True:
 
-    if k % 5 == 0:
+
+    if k % 20 == 0:
       print("Iteration:", k)
 
       phi = []
       theta = []
       lam = []
 
-
       A = []
       W = np.zeros(6)
       dx = []
-
-      suma = np.zeros(6)
 
       constraints = []
 
@@ -50,8 +59,16 @@ def sim_loop(dragon: Dragon):
         theta_i = dragon.get_joint_pos("F"+str(MODULE))  # pitch
         lambda_i = dragon.module_thrust(MODULE)  # thrust force
 
+        phi.append(phi_i)
+        theta.append(theta_i)
+        lam.append(lambda_i)
+
         R_ri = np.array(p.getMatrixFromQuaternion(dragon.module_orientation(MODULE))).reshape(3, 3)  # Rotation matrix of the module
         r_ri = dragon.module_position(MODULE)  # Position of the module in inertial frame
+
+        phi_i = phi[MODULE - 1]  # Roll angle of the module
+        theta_i = theta[MODULE - 1]  # Pitch angle of the module
+        lambda_i = lam[MODULE - 1]  # Thrust force of the module
 
         cp_phi, sp_phi = np.cos(phi_i), np.sin(phi_i)
         cp_theta, sp_theta = np.cos(theta_i), np.sin(theta_i)
@@ -112,20 +129,20 @@ def sim_loop(dragon: Dragon):
         # df/dlambda
         df_dlambda = u_i
 
-        # dτ/dphi
-        dτ_dphi = np.cross(p_i, df_dphi)
+        # dtau/dphi
+        dtau_dphi = np.cross(p_i, df_dphi)
 
-        # dτ/dtheta
-        dτ_dtheta = np.cross(p_i, df_dtheta)
+        # dtau/dtheta
+        dtau_dtheta = np.cross(p_i, df_dtheta)
 
-        # dτ/dlambda
-        dτ_dlambda = np.cross(p_i, df_dlambda)
+        # dtau/dlambda
+        dtau_dlambda = np.cross(p_i, df_dlambda)
 
         # === Assemble A_i ===
 
         A_i = np.block([
             [df_dphi.reshape(3,1), df_dtheta.reshape(3,1), df_dlambda.reshape(3,1)],
-            [dτ_dphi.reshape(3,1), dτ_dtheta.reshape(3,1), dτ_dlambda.reshape(3,1)]
+            [dtau_dphi.reshape(3,1), dtau_dtheta.reshape(3,1), dtau_dlambda.reshape(3,1)]
         ])  # shape (6, 3)
 
         # === CVXPY problem ===
@@ -133,27 +150,32 @@ def sim_loop(dragon: Dragon):
         # Variables: delta phi, delta theta, delta lambda
         dx_i = cp.Variable(3)
 
+        # Collect A_i and W_i
+        A.append(A_i)
+        dx.append(dx_i)
         W += W_i  # Accumulate wrench
 
-        suma = A_i @ dx_i + suma  # Sum of all contributions
+      suma = np.zeros(6)
 
-        constraints.append(phi_i + dx_i[0] >= -np.pi / 2)  # phi >= -90 degrees
-        constraints.append(phi_i + dx_i[0] <= np.pi / 2)   # phi <= 90 degrees
-        constraints.append(theta_i + dx_i[1] >= -np.pi / 2)  # theta >= -90 degrees
-        constraints.append(theta_i + dx_i[1] <= np.pi / 2)   # theta <= 90 degrees
-        constraints.append(lambda_i + dx_i[2] >= 0)  # lambda >= 0
-        constraints.append(lambda_i + dx_i[2] <= 10)  # lambda <= 10 N
-        constraints.append(lambda_i + dx_i[2] >= 0)  # thrust >= 0
-        constraints.append(lambda_i + dx_i[2] <= 10)  # thrust <= 10 N
-
-        phi.append(phi_i)
-        theta.append(theta_i)
-        lam.append(lambda_i)
-        dx.append(dx_i)
+      for i in range(N):
+        suma = A[i] @ dx[i] + suma  # Sum of all contributions
 
       residual = W - W_star + suma  # Residual vector
 
       cost = cp.sum_squares(residual)
+
+      # angle constraints
+      for i in range(dragon.num_modules):
+        constraints.append(phi[i] + dx[i][0] >= -np.pi / 2)  # phi >= -90 degrees
+        constraints.append(phi[i] + dx[i][0] <= np.pi / 2)   # phi <= 90 degrees
+        constraints.append(theta[i] + dx[i][1] >= -np.pi / 2)  # theta >= -90 degrees
+        constraints.append(theta[i] + dx[i][1] <= np.pi / 2)   # theta <= 90 degrees
+        constraints.append(lam[i] + dx[i][2] >= 0)  # lambda >= 0
+        constraints.append(lam[i] + dx[i][2] <= 10)  # lambda <= 10 N
+      # thrust constraints
+      for i in range(dragon.num_modules):
+        constraints.append(lam[i] + dx[i][2] >= 0)  # thrust >= 0
+        constraints.append(lam[i] + dx[i][2] <= 10)  # thrust <= 10 N
 
       prob = cp.Problem(cp.Minimize(cost), constraints)
       prob.solve()
@@ -166,20 +188,22 @@ def sim_loop(dragon: Dragon):
 
       W_hist.append(W.copy())
 
-    dragon.reset_joint_pos("G1", phi[0])
-    dragon.reset_joint_pos("G2", phi[1])
-    dragon.reset_joint_pos("G3", phi[2])
-    dragon.reset_joint_pos("G4", phi[3])
-    dragon.reset_joint_pos("F1", theta[0])
-    dragon.reset_joint_pos("F2", theta[1])
-    dragon.reset_joint_pos("F3", theta[2])
-    dragon.reset_joint_pos("F4", theta[3])
+      dragon.reset_joint_pos("G1", phi[0])
+      dragon.reset_joint_pos("G2", phi[1])
+      dragon.reset_joint_pos("G3", phi[2])
+      dragon.reset_joint_pos("G4", phi[3])
+      dragon.reset_joint_pos("F1", theta[0])
+      dragon.reset_joint_pos("F2", theta[1])
+      dragon.reset_joint_pos("F3", theta[2])
+      dragon.reset_joint_pos("F4", theta[3])
 
     k += 1
 
     dragon.step()
     dragon.thrust([lam[3] / 2, lam[3] / 2, lam[2] / 2, lam[2] / 2,
                   lam[0] / 2, lam[0] / 2, lam[0] / 2, lam[0] / 2,])
+
+
 
 def main():
   input()
