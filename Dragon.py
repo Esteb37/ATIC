@@ -248,6 +248,8 @@ class Dragon:
         ax.set_ylim([-0.5, 1])
         ax.set_zlim([0, 4])
 
+        self.update_kinematics()
+
         for name, info in self.kinematics.items():
             pos = info["position"]
             orn = info["orientation"]

@@ -4,16 +4,18 @@ import Dragon as Dragon
 import pybullet as p
 from scipy.linalg import block_diag
 import matplotlib.pyplot as plt
-
 np.set_printoptions(precision=4, suppress=True)
 
 dragon = Dragon.Dragon()
-dragon.reset_joint_pos("joint1_pitch",-1)
+dragon.reset_joint_pos("joint1_yaw",1)
 dragon.reset_joint_pos("joint2_yaw", 1)
-dragon.reset_joint_pos("joint3_pitch",-1)
-dragon.reset_joint_pos("joint2_pitch", -1)
+dragon.reset_joint_pos("joint3_yaw",1)
+#dragon.reset_joint_pos("joint2_p", -1)
 dragon.hover()
 dragon.step()
+
+
+print(np.linalg.norm(dragon.sum_of_forces()))
 
 fig, ax = plt.subplots(figsize=(10, 10), subplot_kw={'projection': '3d'})
 
@@ -25,7 +27,7 @@ F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([0, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([5, 0, 10 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
 R_r = []
@@ -152,6 +154,8 @@ for i in range(100):
 
   residual = W - W_star + suma  # Residual vector
 
+  cost = cp.sum_squares(residual)
+
   constraints = []
   # angle constraints
   for i in range(dragon.num_modules):
@@ -166,8 +170,7 @@ for i in range(100):
     constraints.append(lam[i] + dx[i][2] >= 0)  # thrust >= 0
     constraints.append(lam[i] + dx[i][2] <= 10)  # thrust <= 10 N
 
-
-  prob = cp.Problem(cp.Minimize(cp.sum_squares(residual)), constraints)
+  prob = cp.Problem(cp.Minimize(cost), constraints)
   prob.solve()
 
   for i in range(dragon.num_modules):
@@ -178,73 +181,33 @@ for i in range(100):
 
   W_hist.append(W.copy())
 
+dragon.reset_joint_pos("G1", phi[0])
+dragon.reset_joint_pos("G2", phi[1])
+dragon.reset_joint_pos("G3", phi[2])
+dragon.reset_joint_pos("G4", phi[3])
+dragon.reset_joint_pos("F1", theta[0])
+dragon.reset_joint_pos("F2", theta[1])
+dragon.reset_joint_pos("F3", theta[2])
+dragon.reset_joint_pos("F4", theta[3])
 
-def R_i(module, dragon, phi, theta):
-    link_orientation = dragon.module_orientation(module + 1)
-
-    base = np.array(p.getMatrixFromQuaternion(link_orientation)).reshape(3, 3)
-
-    # Roll with phi
-    cp = np.cos(phi)
-    sp = np.sin(phi)
-    roll = np.array([[1, 0, 0],
-                    [0, cp, -sp],
-                    [0, sp, cp]])
-
-    # Pitch with theta
-    ct = np.cos(theta)
-    st = np.sin(theta)
-    pitch = np.array([[ct, 0, st],
-                    [0, 1, 0],
-                    [-st, 0, ct]])
-
-    return  base @ roll @ pitch
-
-def T_i(module, dragon, phi):
-    module_pos = dragon.module_position(module + 1)
-    module_orn = dragon.module_orientation(module + 1)
-
-    imu_transform = np.eye(4)
-    imu_transform[:3, 3] = module_pos
-    imu_transform[:3, :3] = np.array(p.getMatrixFromQuaternion(module_orn)).reshape(3, 3)
-
-    F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
-
-    vec_transform = np.eye(4)
-    vec_transform[2, 3] = F_G_z
-
-    cp = np.cos(phi)
-    sp = np.sin(phi)
-
-    roll_transform = np.eye(4)
-    roll_transform[:3, :3] = np.array([[1, 0, 0],
-                                    [0, cp, -sp],
-                                    [0, sp, cp]])
+dragon.thrust([lam[3] / 2, lam[3] / 2, lam[2] / 2, lam[2] / 2,
+              lam[0] / 2, lam[0] / 2, lam[0] / 2, lam[0] / 2,])
 
 
-    transform = imu_transform @ roll_transform @ vec_transform
+fig, ax = plt.subplots(figsize=(10, 10), subplot_kw={'projection': '3d'})
+dragon.plot_on_ax(ax)
+plt.show()
 
-    return transform
+names = ["fx", "fy", "fz", "tx", "ty", "tz"]
+plt.figure(figsize=(12, 8))
 
-def rel_pos(module, dragon, phi):
-    return (T_i(module, dragon, phi) @ np.array([0, 0, 0, 1]))[:3] - dragon.center_of_gravity
-
-R = np.array([R_i(i, dragon, phi[i], theta[i]) for i in range(dragon.num_modules)])
-
-u = np.array([rot @ e_z for rot in R])
-
-rel_positions = [rel_pos(i, dragon, phi[i]) for i in range(dragon.num_modules)]
-
-v = np.array([np.cross(rel_positions[0], u[0]),
-            np.cross(rel_positions[1], u[1]),
-            np.cross(rel_positions[2], u[2]),
-            np.cross(rel_positions[3], u[3])])
-
-F = [lam[i] * u[i] for i in range(dragon.num_modules)]
-T = [lam[i] * v[i] for i in range(dragon.num_modules)]
-
-sum_F = np.sum(F, axis=0)
-sum_T = np.sum(T, axis=0)
-
-W_final = np.concatenate([sum_F, sum_T])
-print("Final Wrench:", W_final)
+for i in range(6):
+    plt.subplot(3, 2, i + 1)
+    plt.plot([w[i] for w in W_hist], label=names[i])
+    plt.axhline(W_star[i], color='red', linestyle='--', label='Target')
+    plt.title(f'Component {names[i]} over iterations')
+    plt.xlabel('Iteration')
+    plt.ylabel('Value')
+    plt.legend()
+plt.tight_layout()
+plt.show()
