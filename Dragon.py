@@ -43,6 +43,8 @@ class Dragon:
         self.load_body_info()
         self.update_kinematics()
 
+        self.F_G_z = np.linalg.norm(self.link_position("F1") - self.link_position("G1"))
+
     ####### Kinematics and Dynamics Methods #######
     def load_body_info(self):
         self.link_dimensions = []
@@ -194,6 +196,121 @@ class Dragon:
         orn = self.kinematics[link_name]["orientation"]
 
         return np.array(orn)
+
+    def module_wrench(self, module_index, phi = None, theta = None, lamb = None, cog = None):
+        R_ri = np.array(p.getMatrixFromQuaternion(self.module_orientation(module_index))).reshape(3, 3)  # Rotation matrix of the module
+        r_ri = self.module_position(module_index)  # Position of the module in inertial frame
+
+        if phi is None:
+            phi = self.get_joint_pos("G1")
+
+        if theta is None:
+            theta = self.get_joint_pos("F1")
+
+        if lamb is None:
+            lamb = self.module_thrust(module_index)
+
+        if cog is None:
+            cog = self.center_of_gravity
+
+        cp_phi, sp_phi = np.cos(phi), np.sin(phi)
+        cp_theta, sp_theta = np.cos(theta), np.sin(theta)
+
+        # Rotation matrices
+        R_phi = np.array([[1, 0, 0],
+                        [0, cp_phi, -sp_phi],
+                        [0, sp_phi, cp_phi]])
+
+        R_theta = np.array([[cp_theta, 0, sp_theta],
+                            [0, 1, 0],
+                            [-sp_theta, 0, cp_theta]])
+
+        e_z = np.array([0, 0, 1])  # Unit vector in z direction
+
+        u = R_ri @ R_phi @ R_theta @ e_z
+
+        vec_transform = np.eye(4)
+        vec_transform[2, 3] = self.F_G_z
+
+        imu_transform = np.eye(4)
+        imu_transform[:3, 3] = r_ri
+        imu_transform[:3, :3] = R_ri
+
+        roll_transform = np.eye(4)
+        roll_transform[:3, :3] = R_phi
+
+        # pos: from CoG to thrust point
+        pos = imu_transform @ roll_transform @ vec_transform @ np.array([0, 0, 0, 1])
+        pos = pos[:3] - cog
+        v = np.cross(pos, u)
+
+        # Force and torque
+        f = lamb * u
+        tau = lamb * v
+
+        W =  np.concatenate([f, tau])  # shape (6,)
+
+        return W, (R_ri, R_phi, R_theta, u, pos)
+
+    def linearize_module(self, module_index, phi = None, theta = None, lamb = None, cog = None):
+
+        if phi is None:
+            phi = self.get_joint_pos("G1")
+
+        if theta is None:
+            theta = self.get_joint_pos("F1")
+
+        if lamb is None:
+            lamb = self.module_thrust(module_index)
+
+        if cog is None:
+            cog = self.center_of_gravity
+
+        W, (R_ri, R_phi, R_theta, u, pos) = self.module_wrench(module_index, phi, theta, lamb, cog)
+
+        cp_phi, sp_phi = np.cos(phi), np.sin(phi)
+        cp_theta, sp_theta = np.cos(theta), np.sin(theta)
+
+        # dR_phi/dphi
+        dR_phi_dphi = np.array([[0, 0, 0],
+                                [0, -sp_phi, -cp_phi],
+                                [0, cp_phi, -sp_phi]])
+
+        # dR_theta/dtheta
+        dR_theta_dtheta = np.array([[-sp_theta, 0, cp_theta],
+                                    [0, 0, 0],
+                                    [-cp_theta, 0, -sp_theta]])
+
+        e_z = np.array([0, 0, 1])  # Unit vector in z direction
+
+        # df/dphi
+        du_dphi = R_ri @ dR_phi_dphi @ R_theta @ e_z
+        df_dphi = lamb * du_dphi
+
+        # df/dtheta
+        du_dtheta = R_ri @ R_phi @ dR_theta_dtheta @ e_z
+        df_dtheta = lamb * du_dtheta
+
+        # df/dlambda
+        df_dlambda = u
+
+        # dtau/dphi
+        dtau_dphi = np.cross(pos, df_dphi)
+
+        # dtau/dtheta
+        dtau_dtheta = np.cross(pos, df_dtheta)
+
+        # dtau/dlambda
+        dtau_dlambda = np.cross(pos, df_dlambda)
+
+        # === Assemble A ===
+
+        A = np.block([
+            [df_dphi.reshape(3,1), df_dtheta.reshape(3,1), df_dlambda.reshape(3,1)],
+            [dtau_dphi.reshape(3,1), dtau_dtheta.reshape(3,1), dtau_dlambda.reshape(3,1)]
+        ])
+
+        return W, A, (phi, theta, lamb)
 
     ######## Control Methods #######
     def thrust(self, forces):
