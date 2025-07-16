@@ -19,10 +19,10 @@ F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([0.2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([1, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
-alpha = 1
+alpha = 10000
 beta = 1
 rho = 1
 
@@ -33,7 +33,7 @@ Adj = np.array([
                   [0,   0,   1/3, 2/3]
               ])
 
-ADMM_ITERATIONS = 100
+ADMM_ITERATIONS = 10
 
 def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
     R_ri = np.array(p.getMatrixFromQuaternion(dragon.module_orientation(MODULE))).reshape(3, 3)  # Rotation matrix of the module
@@ -118,11 +118,11 @@ def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
 
     dx = cp.Variable(3)
 
-    track_cost = alpha / 2 * cp.sum_squares(dragon.num_modules * z_W - W_star)
+    track_cost = alpha / 2 * cp.sum_squares(z_W * dragon.num_modules - W_star)
     effort_cost = beta / 2 * cp.sum_squares(dx)
     cons_cost = rho / 2 * cp.sum_squares((W + A @ dx) - z_W + dual_W)
 
-    cost = track_cost + cons_cost
+    cost = cons_cost + track_cost
 
     constraints = []
     constraints.append(phi + dx[0] >= -np.pi / 2)  # phi >= -90 degrees
@@ -134,57 +134,67 @@ def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
 
     prob = cp.Problem(cp.Minimize(cost), constraints)
 
-    return prob, W, A, dx
+    return prob, W, A, dx, track_cost, cons_cost
 
 
 def solve_admm(dragon : Dragon):
-  dual_W = np.zeros((dragon.num_modules, 6))  # Dual variables for wrenches
-  z_W = [dragon.module_wrench(i + 1) for i in range(dragon.num_modules)]  # Initial wrenches
+  N = dragon.num_modules  # Number of modules
+  dual_W = np.zeros((N, 6))  # Dual variables for wrenches
+  z_W = [dragon.module_wrench(i + 1) for i in range(N)]  # Initial wrenches from modules
 
+  updated_W = np.zeros((N, 6))  # Updated wrenches
 
+  variables = []
 
-  updated_W = np.zeros((dragon.num_modules, 6))  # Updated wrenches
-
-  varis = []
-
-  for MODULE in range(1, dragon.num_modules + 1):
+  for MODULE in range(1, N + 1):
     phi = dragon.get_joint_pos("G"+str(MODULE))  # roll
     theta = dragon.get_joint_pos("F"+str(MODULE))  # pitch
     lamb = dragon.module_thrust(MODULE)  # thrust force
 
-    varis .append((phi, theta, lamb))
+    variables.append((phi, theta, lamb))
 
   for _ in range(ADMM_ITERATIONS):
-
     probs = []
 
-    for i in range(dragon.num_modules):
-      phi, theta, lamb = varis[i]
+    for i in range(N):
+      phi, theta, lamb = variables[i]
       probs.append(module_problem(i + 1, phi, theta, lamb, dual_W[i], z_W[i]))
 
-    for i in range(dragon.num_modules):
-      problem, current_W, A, dx = probs[i]
+    for i in range(N):
+      problem, current_W, A, dx, track_cost, cons_cost = probs[i]
       problem.solve()
 
       updated_W[i] = current_W + A @ dx.value
 
-      varis[i] = (varis[i][0] + dx.value[0], varis[i][1] + dx.value[1], varis[i][2] + dx.value[2])
+      variables[i] = (variables[i][0] + dx.value[0],
+                      variables[i][1] + dx.value[1],
+                      variables[i][2] + dx.value[2])
 
-    z_W = Adj @ (updated_W + dual_W)
-    dual_W += updated_W - z_W
+    z_W = [np.zeros(6) for _ in range(N)]  # Reset z_W for averaging
+    for i in range(N):
+      for j in range(N):
+        z_W[i] += Adj[i, j]*updated_W[j] - z_W[j]
 
-  dragon.reset_joint_pos("G1", varis[0][0])
-  dragon.reset_joint_pos("G2", varis[1][0])
-  dragon.reset_joint_pos("G3", varis[2][0])
-  dragon.reset_joint_pos("G4", varis[3][0])
-  dragon.reset_joint_pos("F1", varis[0][1])
-  dragon.reset_joint_pos("F2", varis[1][1])
-  dragon.reset_joint_pos("F3", varis[2][1])
-  dragon.reset_joint_pos("F4", varis[3][1])
+    dual_W += (updated_W - z_W)
+
+  phi = np.array([variables[i][0] for i in range(N)])
+  theta = np.array([variables[i][1] for i in range(N)])
+
+  dragon.reset_joint_pos("G1", phi[0])
+  dragon.reset_joint_pos("G2", phi[1])
+  dragon.reset_joint_pos("G3", phi[2])
+  dragon.reset_joint_pos("G4", phi[3])
+  dragon.reset_joint_pos("F1", theta[0])
+  dragon.reset_joint_pos("F2", theta[1])
+  dragon.reset_joint_pos("F3", theta[2])
+  dragon.reset_joint_pos("F4", theta[3])
 
   dragon.step()
-  dragon.thrust([varis[3][2] / 2, varis[3][2] / 2, varis[2][2] / 2, varis[2][2] / 2,
-                varis[1][2] / 2, varis[1][2] / 2, varis[0][2] / 2, varis[0][2] / 2,])
+
+  lambs = [variables[N - i - 1][2] / 2 for i in range(N)]
+
+  dragon.thrust([lambs[0], lambs[0], lambs[1], lambs[1],
+                 lambs[2], lambs[2], lambs[3], lambs[3]])
 
 def sim_loop(dragon: Dragon):
   while True:
