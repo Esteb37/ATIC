@@ -22,9 +22,9 @@ e_z = np.array([0, 0, 1])
 W_star = np.array([1, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
-alpha = 10
+alpha = 10000
 beta = 1
-rho = 100
+rho = 1
 
 Adj = np.array([
                   [2/3, 1/3, 0,   0  ],
@@ -118,7 +118,7 @@ def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
 
     dx = cp.Variable(3)
 
-    track_cost = alpha / 2 * cp.sum_squares(z_W - W_star / dragon.num_modules)
+    track_cost = alpha / 2 * cp.sum_squares((W + A @ dx) - W_star / dragon.num_modules)
     effort_cost = beta / 2 * cp.sum_squares(dx)
     cons_cost = rho / 2 * cp.sum_squares((W + A @ dx) - z_W + dual_W)
 
@@ -177,6 +177,8 @@ def solve_admm(dragon : Dragon):
 
     dual_W += (updated_W - z_W)
 
+  print(np.sum(updated_W, axis=0))
+
   phi = np.array([variables[i][0] for i in range(N)])
   theta = np.array([variables[i][1] for i in range(N)])
 
@@ -195,6 +197,9 @@ def solve_admm(dragon : Dragon):
 
   dragon.thrust([lambs[0], lambs[0], lambs[1], lambs[1],
                  lambs[2], lambs[2], lambs[3], lambs[3]])
+
+  print(dragon.wrench() - W_star)
+  print()
 
 def sim_loop(dragon: Dragon):
   while True:
