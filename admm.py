@@ -33,7 +33,7 @@ Adj = np.array([
                   [0,   0,   1/3, 2/3]
               ])
 
-ADMM_ITERATIONS = 10
+ADMM_ITERATIONS = 20
 
 def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
     R_ri = np.array(p.getMatrixFromQuaternion(dragon.module_orientation(MODULE))).reshape(3, 3)  # Rotation matrix of the module
@@ -153,6 +153,7 @@ def solve_admm(dragon : Dragon):
 
     variables.append((phi, theta, lamb))
 
+  f_history = []
   for _ in range(ADMM_ITERATIONS):
     probs = []
 
@@ -170,14 +171,11 @@ def solve_admm(dragon : Dragon):
                       variables[i][1] + dx.value[1],
                       variables[i][2] + dx.value[2])
 
-    z_W = [np.zeros(6) for _ in range(N)]  # Reset z_W for averaging
-    for i in range(N):
-      for j in range(N):
-        z_W[i] += Adj[i, j]*(updated_W[j] + dual_W[j])
+    z_W = Adj @ (updated_W + dual_W)  # Consensus step
+
+    f_history.append(z_W.copy())
 
     dual_W += (updated_W - z_W)
-
-  print(np.sum(updated_W, axis=0))
 
   phi = np.array([variables[i][0] for i in range(N)])
   theta = np.array([variables[i][1] for i in range(N)])
@@ -198,8 +196,37 @@ def solve_admm(dragon : Dragon):
   dragon.thrust([lambs[0], lambs[0], lambs[1], lambs[1],
                  lambs[2], lambs[2], lambs[3], lambs[3]])
 
-  print(dragon.wrench() - W_star)
-  print()
+  fig = plt.figure()
+  ax2 = fig.add_subplot(222)
+  x = np.arange(len(f_history))
+  ax2.plot(x, [h[0][0] for h in f_history], label='F1 X', color='blue')
+  ax2.plot(x, [h[1][0] for h in f_history], label='F2 X', color='green')
+  ax2.plot(x, [h[2][0] for h in f_history], label='F3 X', color='red')
+  ax2.plot(x, [h[3][0] for h in f_history], label='F4 X', color='orange')
+  ax2.set_xlabel('Iteration')
+  ax2.set_ylabel('Fx magnitude')
+  ax2.axhline(W_star[0], color='black', linestyle='--', label='Real CoG X')
+  ax2.legend()
+  ax3 = fig.add_subplot(223)
+  ax3.plot(x, [h[0][1] for h in f_history], label='F1 Y', color='blue')
+  ax3.plot(x, [h[1][1] for h in f_history], label='F2 Y', color='green')
+  ax3.plot(x, [h[2][1] for h in f_history], label='F3 Y', color='red')
+  ax3.plot(x, [h[3][1] for h in f_history], label='F4 Y', color='orange')
+  ax3.set_xlabel('Iteration')
+  ax3.set_ylabel('Fy magnitude')
+  ax3.axhline(W_star[1], color='black', linestyle='--', label='Real CoG Y')
+  ax3.legend()
+  ax4 = fig.add_subplot(224)
+  ax4.plot(x, [h[0][2] for h in f_history], label='F1 Z', color='blue')
+  ax4.plot(x, [h[1][2] for h in f_history], label='F2 Z', color='green')
+  ax4.plot(x, [h[2][2] for h in f_history], label='F3 Z', color='red')
+  ax4.plot(x, [h[3][2] for h in f_history], label='F4 Z', color='orange')
+  ax4.set_xlabel('Iteration')
+  ax4.set_ylabel('Fz magnitude')
+  ax4.axhline(W_star[2], color='black', linestyle='--', label='Real CoG Z')
+  ax4.legend()
+  plt.savefig("admm_wrench_convergence.png")
+
 
 def sim_loop(dragon: Dragon):
   while True:
