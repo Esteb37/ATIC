@@ -74,7 +74,7 @@ def sim_loop(dragon: Dragon):
         lam.append(lambda_i)
         dx.append(dx_i)
 
-      residual = W - W_star + suma  # Residual vector
+      residual = (W + suma) - W_star
 
       cost = cp.sum_squares(residual)
 

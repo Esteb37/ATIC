@@ -140,6 +140,16 @@ class Dragon:
 
         return np.concatenate((force, torque))
 
+    def module_phi(self, module_index):
+        if module_index < 1 or module_index > self.num_modules:
+            raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
+        return self.get_joint_pos("G" + str(module_index))
+
+    def module_theta(self, module_index):
+        if module_index < 1 or module_index > self.num_modules:
+            raise ValueError(f"Module index must be between 1 and {self.num_modules}.")
+        return self.get_joint_pos("F" + str(module_index))
+
     def sum_of_forces(self):
         forces = np.zeros(3)
         for _, force in self.external_forces:
@@ -413,7 +423,7 @@ class Dragon:
                 ax.quiver(
                     self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
                     total_torque[0], total_torque[1], total_torque[2],
-                    color='red', length=torque_magnitude / GRAVITY, normalize=True
+                    color='red', length=torque_magnitude, normalize=True
                 )
 
             for i in range(self.num_modules):

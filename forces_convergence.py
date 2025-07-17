@@ -8,8 +8,8 @@ def R_i(module, dragon):
 
     base = np.array(p.getMatrixFromQuaternion(link_orientation)).reshape(3, 3)
 
-    phi = dragon.get_joint_pos("G" + str(module + 1))
-    theta = dragon.get_joint_pos("F" + str(module + 1))
+    phi = dragon.module_phi(module + 1)
+    theta = dragon.module_theta(module + 1)
 
     # Roll with phi
     cp = np.cos(phi)

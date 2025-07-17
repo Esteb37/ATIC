@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 np.set_printoptions(precision=4, suppress=True)
 
 dragon = Dragon.Dragon()
-dragon.reset_joint_pos("joint1_pitch",-1.5)
+"""dragon.reset_joint_pos("joint1_pitch",-1.5)
 dragon.reset_joint_pos("joint2_pitch", 1.5)
-dragon.reset_joint_pos("joint3_pitch", 1.5)
+dragon.reset_joint_pos("joint3_pitch", 1.5)"""
 dragon.hover()
 dragon.step()
 
@@ -19,7 +19,7 @@ dragon.step()
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([0, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 
 
 alpha = 100
@@ -35,14 +35,11 @@ Adj = np.array([
 
 ADMM_ITERATIONS = 20
 
-def module_problem(MODULE, phi, theta, lamb, dual_W, z_W, W_next):
+def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
 
     # CVX Problem Setup
 
     W, A = dragon.linearize_module(MODULE, phi, theta, lamb)
-
-    if W_next is not None:
-      W = W_next
 
     dx = cp.Variable(3)
 
@@ -76,8 +73,8 @@ def solve_admm(dragon : Dragon):
   variables = []
 
   for MODULE in range(1, N + 1):
-    phi = dragon.get_joint_pos("G"+str(MODULE))  # roll
-    theta = dragon.get_joint_pos("F"+str(MODULE))  # pitch
+    phi = dragon.module_phi(MODULE)  # roll
+    theta = dragon.module_theta(MODULE)  # pitch
     lamb = dragon.module_thrust(MODULE)  # thrust force
 
     variables.append((phi, theta, lamb))
@@ -88,13 +85,9 @@ def solve_admm(dragon : Dragon):
 
     for i in range(N):
       phi, theta, lamb = variables[i]
-      probs.append(module_problem(i + 1, phi, theta, lamb, dual_W[i], z_W[i], updated_W[i]))
+      probs.append(module_problem(i + 1, phi, theta, lamb, dual_W[i], z_W[i]))
 
     z_W = np.zeros((N, 6))  # Reset z_W for this iteration
-
-    if updated_W is None:
-      updated_W = np.zeros((N, 6))
-
     for i in range(N):
       problem, current_W, A, dx, track_cost, cons_cost = probs[i]
       problem.solve()
@@ -112,7 +105,6 @@ def solve_admm(dragon : Dragon):
       dual_W[i] += (updated_W[i] - z_W[i])
 
     f_history.append(np.sum(updated_W, axis=0))
-
 
   phi = np.array([variables[i][0] for i in range(N)])
   theta = np.array([variables[i][1] for i in range(N)])
