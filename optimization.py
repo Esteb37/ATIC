@@ -18,7 +18,7 @@ F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([0, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
 

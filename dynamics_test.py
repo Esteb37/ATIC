@@ -4,79 +4,78 @@ import matplotlib.pyplot as plt
 import pybullet as p
 import threading
 
-dragon = Dragon()
-dragon.reset_joint_pos("joint1_pitch",-1.5)
-dragon.reset_joint_pos("joint2_pitch", 1.5)
-dragon.reset_joint_pos("joint3_pitch", 1.5)
-dragon.hover()
-dragon.step()
+real_dragon = Dragon()
+real_dragon.reset_joint_pos("joint1_pitch",-1.5)
+real_dragon.reset_joint_pos("joint2_pitch", 1.5)
+real_dragon.reset_joint_pos("joint3_pitch", 1.5)
+real_dragon.hover()
+real_dragon.step()
 
 fig = plt.figure(figsize=(10, 5))
 ax = fig.add_subplot(111, projection='3d')
-dragon.plot_on_ax(ax)
+real_dragon.plot_on_ax(ax)
 
 real_W_hist = []
 pred_W_hist = []
 
 u = 0.1
 for _ in range(10):
-    real_W = dragon.wrench()
+    real_W = real_dragon.wrench()
     real_W_hist.append(real_W)
 
     thrusts = []
-    for i in range(dragon.num_modules):
-      phi = dragon.get_joint_pos(f"G{i+1}")
-      theta = dragon.get_joint_pos(f"F{i+1}")
-      thrust = dragon.module_thrust(i+1)
+    for i in range(real_dragon.num_modules):
+      phi = real_dragon.get_joint_pos(f"G{i+1}")
+      theta = real_dragon.get_joint_pos(f"F{i+1}")
+      thrust = real_dragon.module_thrust(i+1)
 
       phi += u
       theta += u
       thrust += u
 
-      dragon.reset_joint_pos(f"G{i+1}", phi)
-      dragon.reset_joint_pos(f"F{i+1}", theta)
+      real_dragon.reset_joint_pos(f"G{i+1}", phi)
+      real_dragon.reset_joint_pos(f"F{i+1}", theta)
 
       thrusts.append(thrust / 2)
       thrusts.append(thrust / 2)
 
-    dragon.step()
-    dragon.thrust(thrusts)
+    real_dragon.step()
+    real_dragon.thrust(thrusts)
 
-dragon = Dragon()
-dragon.hover()
-dragon.step()
+p.resetSimulation()
+pred_dragon = Dragon()
+pred_dragon.reset_joint_pos("joint1_pitch",-1.5)
+pred_dragon.reset_joint_pos("joint2_pitch", 1.5)
+pred_dragon.reset_joint_pos("joint3_pitch", 1.5)
+pred_dragon.hover()
+pred_dragon.step()
 
-phi = np.zeros(dragon.num_modules)
-theta = np.zeros(dragon.num_modules)
-thrust = np.zeros(dragon.num_modules)
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111, projection='3d')
+pred_dragon.plot_on_ax(ax)
+
+
+phi = np.zeros(pred_dragon.num_modules)
+theta = np.zeros(pred_dragon.num_modules)
+thrust = np.zeros(pred_dragon.num_modules)
+
+for i in range(pred_dragon.num_modules):
+  phi[i] = pred_dragon.get_joint_pos(f"G{i+1}")
+  theta[i] = pred_dragon.get_joint_pos(f"F{i+1}")
+  thrust[i] = pred_dragon.module_thrust(i+1)
 
 for _ in range(10):
   wrenches = []
-
-
   thrusts = []
-  for i in range(dragon.num_modules):
-    phi = dragon.get_joint_pos(f"G{i+1}")
-    theta = dragon.get_joint_pos(f"F{i+1}")
-    thrust = dragon.module_thrust(i+1)
-
-    W = dragon.module_wrench(i+1)
+  for i in range(pred_dragon.num_modules):
+    W, _ = pred_dragon.pred_module_wrench(i+1, phi[i], theta[i], thrust[i])
     wrenches.append(W)
 
     phi += u
     theta += u
     thrust += u
 
-    dragon.reset_joint_pos(f"G{i+1}", phi)
-    dragon.reset_joint_pos(f"F{i+1}", theta)
-
-    thrusts.append(thrust / 2)
-    thrusts.append(thrust / 2)
-
   pred_W_hist.append(np.sum(wrenches, axis=0))
-  dragon.step()
-  dragon.thrust(thrusts)
-
 
 fig = plt.figure(figsize=(10, 5))
 names = ["Fx", "Fy", "Fz", "Tx", "Ty", "Tz"]

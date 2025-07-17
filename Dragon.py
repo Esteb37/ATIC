@@ -27,6 +27,8 @@ class Dragon:
         ####### Kinematics Information #######
         self.rotor_names = [p.getJointInfo(self.robot_id, i)[12].decode('utf-8') for i in range(p.getNumJoints(self.robot_id)) if "rotor" in p.getJointInfo(self.robot_id, i)[12].decode('utf-8').lower()]
 
+        self.rotor_names = self.rotor_names[::-1]
+
         self.num_links = p.getNumJoints(self.robot_id)
         self.num_rotors = len(self.rotor_names)
         self.num_modules = int(self.num_rotors / 2)
@@ -125,7 +127,7 @@ class Dragon:
 
     def module_torque(self, module_index):
         force = self.module_force(module_index)
-        position = self.link_position("F" + str(module_index)) - self.module_com(module_index)
+        position = self.link_position("F" + str(module_index)) - self.center_of_gravity
         torque = np.cross(position, force)
         return torque
 
@@ -317,8 +319,6 @@ class Dragon:
 
             self.external_forces.append((position, world_force))
 
-        # invert external_forces
-        self.external_forces = self.external_forces[::-1]
 
     def set_joint_pos(self, name_or_id, value):
         idx = self._get_id(name_or_id)
@@ -363,7 +363,7 @@ class Dragon:
 
         ax.set_xlim([-0.5, 1])
         ax.set_ylim([-0.5, 1])
-        ax.set_zlim([0, 4])
+        ax.set_zlim([2, 4])
 
         self.update_kinematics()
 

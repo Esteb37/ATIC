@@ -19,7 +19,7 @@ dragon.step()
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([1, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([0, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 
 
 alpha = 100
@@ -39,7 +39,7 @@ def module_problem(MODULE, phi, theta, lamb, dual_W, z_W, W_next):
 
     # CVX Problem Setup
 
-    W, A, _= dragon.linearize_module(MODULE, phi, theta, lamb)
+    W, A = dragon.linearize_module(MODULE, phi, theta, lamb)
 
     if W_next is not None:
       W = W_next
@@ -127,6 +127,7 @@ def solve_admm(dragon : Dragon):
   dragon.reset_joint_pos("F4", theta[3])
 
   dragon.step()
+  print(dragon.wrench())
 
   lambs = [variables[i][2] / 2 for i in range(N)]
 
