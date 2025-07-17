@@ -1,0 +1,29 @@
+for each timestep:
+  simulation.step()
+
+  N = dragon.modules
+  dual_W = 0
+  z_W = 0
+  next_W = 0
+
+  for each module i in N:
+    (phi[i], theta[i], thrust[i]) = module.state()
+
+  for each ADMM iteration:
+      for each module i in N:
+        W[i] = module.compute_wrench(phi[i], theta[i], thrust[i])
+        A = module.compute_dynamics(phi[i], theta[i], thrust[i])
+        problem[i] = module.create_problem(A[i], W[i])
+
+      for each module i in N:
+        dphi[i], dtheta[i], dthrust[i] = problem[i].solve()
+        next_W[i] = W[i] + A[i] * [dphi[i], dtheta[i], dthrust[i]]
+        phi[i] += dphi[i]
+        theta[i] += dtheta[i]
+        thrust[i] += dthrust[i]
+
+        z_W[i] = 0
+        for each neighbor j in N:
+          z_W[i] += next_W[i] + dual_W[i]
+
+        dual_W[i] += (next_W[i] - z_W[i])

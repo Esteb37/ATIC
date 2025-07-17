@@ -20,11 +20,11 @@ e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
 W_star = np.array([1, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_hist = []  # History of wrenches
 
-
-alpha = 100
+alpha = 10000
 beta = 1
-rho = 100
+rho = 1
 
 Adj = np.array([
                   [2/3, 1/3, 0,   0  ],
@@ -35,20 +35,16 @@ Adj = np.array([
 
 ADMM_ITERATIONS = 20
 
-def module_problem(MODULE, phi, theta, lamb, dual_W, z_W, W_next):
+def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
 
     # CVX Problem Setup
 
     W, A, _= dragon.linearize_module(MODULE, phi, theta, lamb)
 
-    if W_next is not None:
-      W = W_next
-
     dx = cp.Variable(3)
 
     track_cost = alpha / 2 * cp.sum_squares((W + A @ dx) - W_star / dragon.num_modules)
     effort_cost = beta / 2 * cp.sum_squares(dx)
-
     cons_cost = rho / 2 * cp.sum_squares((W + A @ dx) - z_W + dual_W)
 
     cost = cons_cost + track_cost
@@ -69,9 +65,9 @@ def module_problem(MODULE, phi, theta, lamb, dual_W, z_W, W_next):
 def solve_admm(dragon : Dragon):
   N = dragon.num_modules  # Number of modules
   dual_W = np.zeros((N, 6))  # Dual variables for wrenches
-  z_W = np.zeros((N, 6))  # Consensus variables for wrenches
+  z_W = [dragon.module_wrench(i + 1) for i in range(N)]  # Initial wrenches from modules
 
-  updated_W = [None] * N  # Updated wrenches for each module
+  updated_W = np.zeros((N, 6))  # Updated wrenches
 
   variables = []
 
@@ -88,12 +84,7 @@ def solve_admm(dragon : Dragon):
 
     for i in range(N):
       phi, theta, lamb = variables[i]
-      probs.append(module_problem(i + 1, phi, theta, lamb, dual_W[i], z_W[i], updated_W[i]))
-
-    z_W = np.zeros((N, 6))  # Reset z_W for this iteration
-
-    if updated_W is None:
-      updated_W = np.zeros((N, 6))
+      probs.append(module_problem(i + 1, phi, theta, lamb, dual_W[i], z_W[i]))
 
     for i in range(N):
       problem, current_W, A, dx, track_cost, cons_cost = probs[i]
@@ -105,13 +96,11 @@ def solve_admm(dragon : Dragon):
                       variables[i][1] + dx.value[1],
                       variables[i][2] + dx.value[2])
 
-      for j in range(N):
-        if Adj[i, j] > 0:
-          z_W[i] += Adj[i, j] * (updated_W[i] + dual_W[i])
+    z_W = Adj @ (updated_W + dual_W)  # Consensus step
 
-      dual_W[i] += (updated_W[i] - z_W[i])
+    f_history.append(z_W.copy())
 
-    f_history.append(np.sum(updated_W, axis=0))
+    dual_W += (updated_W - z_W)
 
 
   phi = np.array([variables[i][0] for i in range(N)])
@@ -136,33 +125,34 @@ def solve_admm(dragon : Dragon):
   fig = plt.figure()
   ax2 = fig.add_subplot(222)
   x = np.arange(len(f_history))
-  ax2.plot(x, [h[0] for h in f_history], label='F1 X', color='blue')
-  ax2.plot(x, [h[0] for h in f_history], label='F2 X', color='green')
-  ax2.plot(x, [h[0] for h in f_history], label='F3 X', color='red')
-  ax2.plot(x, [h[0] for h in f_history], label='F4 X', color='orange')
+  ax2.plot(x, [h[0][0] for h in f_history], label='F1 X', color='blue')
+  ax2.plot(x, [h[1][0] for h in f_history], label='F2 X', color='green')
+  ax2.plot(x, [h[2][0] for h in f_history], label='F3 X', color='red')
+  ax2.plot(x, [h[3][0] for h in f_history], label='F4 X', color='orange')
   ax2.set_xlabel('Iteration')
   ax2.set_ylabel('Fx magnitude')
-  ax2.axhline(W_star[0], color='black', linestyle='--', label='Target Force X')
+  ax2.axhline(W_star[0], color='black', linestyle='--', label='Real CoG X')
   ax2.legend()
   ax3 = fig.add_subplot(223)
-  ax3.plot(x, [h[1] for h in f_history], label='F1 Y', color='blue')
-  ax3.plot(x, [h[1] for h in f_history], label='F2 Y', color='green')
-  ax3.plot(x, [h[1] for h in f_history], label='F3 Y', color='red')
-  ax3.plot(x, [h[1] for h in f_history], label='F4 Y', color='orange')
+  ax3.plot(x, [h[0][1] for h in f_history], label='F1 Y', color='blue')
+  ax3.plot(x, [h[1][1] for h in f_history], label='F2 Y', color='green')
+  ax3.plot(x, [h[2][1] for h in f_history], label='F3 Y', color='red')
+  ax3.plot(x, [h[3][1] for h in f_history], label='F4 Y', color='orange')
   ax3.set_xlabel('Iteration')
   ax3.set_ylabel('Fy magnitude')
-  ax3.axhline(W_star[1], color='black', linestyle='--', label='Target Force Y')
+  ax3.axhline(W_star[1], color='black', linestyle='--', label='Real CoG Y')
   ax3.legend()
   ax4 = fig.add_subplot(224)
-  ax4.plot(x, [h[2] for h in f_history], label='F1 Z', color='blue')
-  ax4.plot(x, [h[2] for h in f_history], label='F2 Z', color='green')
-  ax4.plot(x, [h[2] for h in f_history], label='F3 Z', color='red')
-  ax4.plot(x, [h[2] for h in f_history], label='F4 Z', color='orange')
+  ax4.plot(x, [h[0][2] for h in f_history], label='F1 Z', color='blue')
+  ax4.plot(x, [h[1][2] for h in f_history], label='F2 Z', color='green')
+  ax4.plot(x, [h[2][2] for h in f_history], label='F3 Z', color='red')
+  ax4.plot(x, [h[3][2] for h in f_history], label='F4 Z', color='orange')
   ax4.set_xlabel('Iteration')
   ax4.set_ylabel('Fz magnitude')
-  ax4.axhline(W_star[2], color='black', linestyle='--', label='Target Force Z')
+  ax4.axhline(W_star[2], color='black', linestyle='--', label='Real CoG Z')
   ax4.legend()
-  plt.savefig('admm_results.png')
+  plt.savefig("admm_wrench_convergence.png")
+  print("here")
 
 
 def sim_loop(dragon: Dragon):
