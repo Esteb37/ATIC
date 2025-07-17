@@ -461,7 +461,7 @@ class Dragon:
         self._drawn_artists.append(box)
 
     def _init_plot(self):
-        self._fig = plt.figure(figsize=(20, 10))
+        self._fig = plt.figure(figsize=(10, 10))
         self._ax_world = self._fig.add_subplot(121, projection='3d')
         self._ax_robot = self._fig.add_subplot(122, projection='3d')
         self._scatter_cog_world = self._ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')

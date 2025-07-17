@@ -62,7 +62,6 @@ fig = plt.figure(figsize=(10, 5))
 ax = fig.add_subplot(111, projection='3d')
 pred_dragon.plot_on_ax(ax)
 
-
 phi = np.zeros(pred_dragon.num_modules)
 theta = np.zeros(pred_dragon.num_modules)
 thrust = np.zeros(pred_dragon.num_modules)

@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 np.set_printoptions(precision=4, suppress=True)
 
 dragon = Dragon.Dragon()
-"""dragon.reset_joint_pos("joint1_pitch",-1.5)
+dragon.reset_joint_pos("joint1_pitch",-1.5)
 dragon.reset_joint_pos("joint2_pitch", 1.5)
-dragon.reset_joint_pos("joint3_pitch", 1.5)"""
+dragon.reset_joint_pos("joint3_pitch", 1.5)
 dragon.hover()
 dragon.step()
 
@@ -35,15 +35,14 @@ Adj = np.array([
 
 ADMM_ITERATIONS = 20
 
-def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
+def module_problem(MODULE, phi, theta, lamb, dual_W, z_W, ratio):
 
     # CVX Problem Setup
 
     W, A = dragon.linearize_module(MODULE, phi, theta, lamb)
 
     dx = cp.Variable(3)
-
-    track_cost = alpha / 2 * cp.sum_squares((W + A @ dx) - W_star / dragon.num_modules)
+    track_cost = alpha / 2 * cp.sum_squares((W + A @ dx) - W_star * ratio)
     effort_cost = beta / 2 * cp.sum_squares(dx)
 
     cons_cost = rho / 2 * cp.sum_squares((W + A @ dx) - z_W + dual_W)
@@ -72,6 +71,9 @@ def solve_admm(dragon : Dragon):
 
   variables = []
 
+  real_W = dragon.wrench()
+
+
   for MODULE in range(1, N + 1):
     phi = dragon.module_phi(MODULE)  # roll
     theta = dragon.module_theta(MODULE)  # pitch
@@ -85,7 +87,8 @@ def solve_admm(dragon : Dragon):
 
     for i in range(N):
       phi, theta, lamb = variables[i]
-      probs.append(module_problem(i + 1, phi, theta, lamb, dual_W[i], z_W[i]))
+      ratio = np.linalg.norm(dragon.module_wrench(i + 1)) / np.linalg.norm(real_W)
+      probs.append(module_problem(i + 1, phi, theta, lamb, dual_W[i], z_W[i], ratio))
 
     z_W = np.zeros((N, 6))  # Reset z_W for this iteration
     for i in range(N):
@@ -104,7 +107,7 @@ def solve_admm(dragon : Dragon):
 
       dual_W[i] += (updated_W[i] - z_W[i])
 
-    f_history.append(np.sum(updated_W, axis=0))
+    f_history.append(updated_W.copy())
 
   phi = np.array([variables[i][0] for i in range(N)])
   theta = np.array([variables[i][1] for i in range(N)])
@@ -119,7 +122,6 @@ def solve_admm(dragon : Dragon):
   dragon.reset_joint_pos("F4", theta[3])
 
   dragon.step()
-  print(dragon.wrench())
 
   lambs = [variables[i][2] / 2 for i in range(N)]
 
@@ -127,34 +129,22 @@ def solve_admm(dragon : Dragon):
                  lambs[2], lambs[2], lambs[3], lambs[3]])
 
   fig = plt.figure()
-  ax2 = fig.add_subplot(222)
   x = np.arange(len(f_history))
-  ax2.plot(x, [h[0] for h in f_history], label='F1 X', color='blue')
-  ax2.plot(x, [h[0] for h in f_history], label='F2 X', color='green')
-  ax2.plot(x, [h[0] for h in f_history], label='F3 X', color='red')
-  ax2.plot(x, [h[0] for h in f_history], label='F4 X', color='orange')
-  ax2.set_xlabel('Iteration')
-  ax2.set_ylabel('Fx magnitude')
-  ax2.axhline(W_star[0], color='black', linestyle='--', label='Target Force X')
-  ax2.legend()
-  ax3 = fig.add_subplot(223)
-  ax3.plot(x, [h[1] for h in f_history], label='F1 Y', color='blue')
-  ax3.plot(x, [h[1] for h in f_history], label='F2 Y', color='green')
-  ax3.plot(x, [h[1] for h in f_history], label='F3 Y', color='red')
-  ax3.plot(x, [h[1] for h in f_history], label='F4 Y', color='orange')
-  ax3.set_xlabel('Iteration')
-  ax3.set_ylabel('Fy magnitude')
-  ax3.axhline(W_star[1], color='black', linestyle='--', label='Target Force Y')
-  ax3.legend()
-  ax4 = fig.add_subplot(224)
-  ax4.plot(x, [h[2] for h in f_history], label='F1 Z', color='blue')
-  ax4.plot(x, [h[2] for h in f_history], label='F2 Z', color='green')
-  ax4.plot(x, [h[2] for h in f_history], label='F3 Z', color='red')
-  ax4.plot(x, [h[2] for h in f_history], label='F4 Z', color='orange')
-  ax4.set_xlabel('Iteration')
-  ax4.set_ylabel('Fz magnitude')
-  ax4.axhline(W_star[2], color='black', linestyle='--', label='Target Force Z')
-  ax4.legend()
+
+  names = ["FX", "FY", "FZ", "TX", "TY", "TZ"]
+
+  for i, name in enumerate(names):
+    ax = fig.add_subplot(2, 3, i + 1)
+    ax.plot(x, [h[0][i] for h in f_history], label=f'1', color='blue')
+    ax.plot(x, [h[1][i] for h in f_history], label=f'2', color='green')
+    ax.plot(x, [h[2][i] for h in f_history], label=f'3', color='red')
+    ax.plot(x, [h[3][i] for h in f_history], label=f'4', color='orange')
+    ax.plot(x, [np.sum(h, axis = 0)[i] for h in f_history], label="Sum", color='purple')
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel(f'{name} magnitude')
+    ax.axhline(W_star[i], color='black', linestyle='--', label='Target Force X')
+    #ax.legend()
+
   plt.savefig('admm_results.png')
 
 
