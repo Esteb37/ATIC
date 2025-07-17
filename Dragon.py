@@ -197,18 +197,9 @@ class Dragon:
 
         return np.array(orn)
 
-    def module_wrench(self, module_index, phi = None, theta = None, lamb = None, cog = None):
+    def pred_module_wrench(self, module_index, phi, theta, lamb, cog = None):
         R_ri = np.array(p.getMatrixFromQuaternion(self.module_orientation(module_index))).reshape(3, 3)  # Rotation matrix of the module
         r_ri = self.module_position(module_index)  # Position of the module in inertial frame
-
-        if phi is None:
-            phi = self.get_joint_pos("G1")
-
-        if theta is None:
-            theta = self.get_joint_pos("F1")
-
-        if lamb is None:
-            lamb = self.module_thrust(module_index)
 
         if cog is None:
             cog = self.center_of_gravity
@@ -252,21 +243,12 @@ class Dragon:
 
         return W, (R_ri, R_phi, R_theta, u, pos)
 
-    def linearize_module(self, module_index, phi = None, theta = None, lamb = None, cog = None):
-
-        if phi is None:
-            phi = self.get_joint_pos("G1")
-
-        if theta is None:
-            theta = self.get_joint_pos("F1")
-
-        if lamb is None:
-            lamb = self.module_thrust(module_index)
+    def linearize_module(self, module_index, phi, theta, lamb, cog = None):
 
         if cog is None:
             cog = self.center_of_gravity
 
-        W, (R_ri, R_phi, R_theta, u, pos) = self.module_wrench(module_index, phi, theta, lamb, cog)
+        W, (R_ri, R_phi, R_theta, u, pos) = self.pred_module_wrench(module_index, phi, theta, lamb, cog)
 
         cp_phi, sp_phi = np.cos(phi), np.sin(phi)
         cp_theta, sp_theta = np.cos(theta), np.sin(theta)
@@ -310,7 +292,7 @@ class Dragon:
             [dtau_dphi.reshape(3,1), dtau_dtheta.reshape(3,1), dtau_dlambda.reshape(3,1)]
         ])
 
-        return W, A, (phi, theta, lamb)
+        return W, A
 
     ######## Control Methods #######
     def thrust(self, forces):
@@ -334,6 +316,9 @@ class Dragon:
             p.applyExternalForce(self.robot_id, idx, world_force, position, p.WORLD_FRAME)
 
             self.external_forces.append((position, world_force))
+
+        # invert external_forces
+        self.external_forces = self.external_forces[::-1]
 
     def set_joint_pos(self, name_or_id, value):
         idx = self._get_id(name_or_id)
@@ -429,6 +414,22 @@ class Dragon:
                     self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
                     total_torque[0], total_torque[1], total_torque[2],
                     color='red', length=torque_magnitude / GRAVITY, normalize=True
+                )
+
+            for i in range(self.num_modules):
+                wrench = self.module_wrench(i + 1)
+                module_pos = self.module_position(i + 1)
+
+                ax.quiver(
+                    module_pos[0], module_pos[1], module_pos[2],
+                    wrench[0], wrench[1], wrench[2],
+                    color='blue', length=np.linalg.norm(wrench[:3]) / 2, normalize=True
+                )
+
+                ax.quiver(
+                    module_pos[0], module_pos[1], module_pos[2],
+                    wrench[3], wrench[4], wrench[5],
+                    color='orange', length=np.linalg.norm(wrench[:3]) / 2, normalize=True
                 )
 
     ##### Private Methods #####

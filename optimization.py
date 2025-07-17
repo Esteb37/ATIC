@@ -18,7 +18,7 @@ F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([0.2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([0, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
 
@@ -45,7 +45,11 @@ def sim_loop(dragon: Dragon):
       constraints = []
 
       for MODULE in range(1, dragon.num_modules + 1):
-        W_i, A_i, (phi_i, theta_i, lambda_i) = dragon.linearize_module(MODULE)
+        phi_i = dragon.get_joint_pos(f"G{MODULE}")
+        theta_i = dragon.get_joint_pos(f"F{MODULE}")
+        lambda_i = dragon.module_thrust(MODULE)
+
+        W_i, A_i = dragon.linearize_module(MODULE, phi_i, theta_i, lambda_i)
 
         # === CVXPY problem ===
 
@@ -97,8 +101,8 @@ def sim_loop(dragon: Dragon):
     k += 1
 
     dragon.step()
-    dragon.thrust([lam[3] / 2, lam[3] / 2, lam[2] / 2, lam[2] / 2,
-                  lam[1] / 2, lam[1] / 2, lam[0] / 2, lam[0] / 2,])
+    dragon.thrust([lam[0] / 2, lam[0] / 2, lam[1] / 2, lam[1] / 2,
+                  lam[2] / 2, lam[2] / 2, lam[3] / 2, lam[3] / 2,])
 
 def main():
   threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
