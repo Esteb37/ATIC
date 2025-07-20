@@ -19,7 +19,7 @@ dragon.step()
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([2, 1, 9.81 * dragon.total_mass, 1, 1, 1])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 
 real_dW = W_star - dragon.wrench()
 
@@ -30,7 +30,6 @@ Adj = np.array([
                   [0,   0,   1/3, 2/3]
               ])
 
-ITERS = 1000
 
 N = dragon.num_modules
 
@@ -39,22 +38,29 @@ W = [dragon.module_wrench(i) for i in range(1, N + 1)]
 for i in range(100):
   W = Adj @ W
 
-W *= N
 
-alpha = 0.8
-beta = 0.9
+alpha = 0.6
+beta = 1
 
 dW_pred = np.zeros((N, 6))
 dW_pred_hist = []
 
-V = np.zeros((N, 6))
-for k in range(ITERS):
+V = W.copy()
+
+Q = np.diag([1, 1, 1, 10, 20, 10]) * alpha
+
+MAX_ITERS = 100
+
+epsilon = 0.001
+
+prev_dW = None
+for k in range(MAX_ITERS):
   V_new = V.copy()
+  dus = []
   for i in range(N):
-    dW = (W_star - W[i]) / N
+    dW = W_star / N - W[i]
 
     du = cp.Variable(3)
-
     phi = dragon.module_phi(i + 1)
     theta = dragon.module_theta(i + 1)
     thrust = dragon.module_thrust(i + 1)
@@ -72,6 +78,8 @@ for k in range(ITERS):
     constraints.append(theta + du[1] <= np.pi / 2)   # theta <= 90 degrees
     constraints.append(thrust + du[2] >= 0)  # lambda >= 0
     constraints.append(thrust + du[2] <= 10)  # lambda <= 10 N
+    constraints.append(cp.abs(du[0]) <= 0.2)
+    constraints.append(cp.abs(du[1]) <= 0.2)
 
     cp.Problem(cp.Minimize(f + lagrange), constraints).solve(verbose = False, polish = False)
     du_value = du.value
@@ -80,13 +88,18 @@ for k in range(ITERS):
     for j in range(N):
       cons += Adj[i, j] * (V[j] - V[i])
 
-    V_new[i] += alpha * (J @ du_value - dW) + beta * cons
+    V_new[i] += Q @ (J @ du_value - dW) + beta * cons
 
     dW_pred[i] = J @ du_value
 
   dW_pred_hist.append(dW_pred.copy())
-
   V = V_new.copy()
+
+  if prev_dW is not None and np.all(np.abs(np.sum(dW_pred, axis = 0) - prev_dW) < epsilon):
+    print(f"Converged at iteration {k}")
+    break
+
+  prev_dW = np.sum(dW_pred, axis=0)
 
 names = ["FX", "FY", "FZ", "TX", "TY", "TZ"]
 fig = plt.figure()

@@ -18,7 +18,7 @@ F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+W_star = np.array([2, 1, 9.81 * dragon.total_mass, 1, 1, 1])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
 
@@ -66,20 +66,24 @@ def sim_loop(dragon: Dragon):
         constraints.append(theta_i + dx_i[1] <= np.pi / 2)   # theta <= 90 degrees
         constraints.append(lambda_i + dx_i[2] >= 0)  # lambda >= 0
         constraints.append(lambda_i + dx_i[2] <= 10)  # lambda <= 10 N
-        constraints.append(lambda_i + dx_i[2] >= 0)  # thrust >= 0
-        constraints.append(lambda_i + dx_i[2] <= 10)  # thrust <= 10 N
+        constraints.append(cp.abs(dx_i[0]) <= 0.1)
+        constraints.append(cp.abs(dx_i[1]) <= 0.1)
+        constraints.append(cp.abs(dx_i[2]) <= 0.1)
 
         phi.append(phi_i)
         theta.append(theta_i)
         lam.append(lambda_i)
         dx.append(dx_i)
 
-      residual = (W + suma) - W_star
+      residual = (dragon.wrench() + suma) - W_star
 
       cost = cp.sum_squares(residual)
 
       prob = cp.Problem(cp.Minimize(cost), constraints)
       prob.solve()
+
+      for i in range(dragon.num_modules):
+        print(f"Module {i+1}: dx = {dx[i].value}, W = {W[i]}")
 
       for i in range(dragon.num_modules):
         # Update angles and thrusts

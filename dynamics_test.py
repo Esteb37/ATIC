@@ -28,7 +28,7 @@ pred_W_hist = []
 pred_cog_hist = []
 calc_W_hist = []
 
-u = 0.1
+u = 0.5
 
 for _ in range(10):
     real_W = real_dragon.wrench()
