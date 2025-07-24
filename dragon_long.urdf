@@ -31,7 +31,7 @@
     <child  link="joint1_yaw_link"/>
     <origin xyz="0.325 0 0" rpy="0 0 0"/>      <!-- at end of L1 rod ({L2} start) -->
     <axis   xyz="0 0 1"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <joint name="joint1_pitch" type="revolute">
@@ -39,7 +39,7 @@
     <child  link="joint1_pitch_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>          <!-- coincident with yaw frame -->
     <axis   xyz="0 1 0"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <link name="joint1_pitch_link">
@@ -86,7 +86,7 @@
     <child  link="joint2_yaw_link"/>
     <origin xyz="0.325 0 0" rpy="0 0 0"/>         <!-- at end of L2 -->
     <axis   xyz="0 0 1"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <joint name="joint2_pitch" type="revolute">
@@ -94,7 +94,7 @@
     <child  link="joint2_pitch_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <link name="joint2_pitch_link">
@@ -140,7 +140,7 @@
     <child  link="joint3_yaw_link"/>
     <origin xyz="0.325 0 0" rpy="0 0 0"/>
     <axis   xyz="0 0 1"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <joint name="joint3_pitch" type="revolute">
@@ -148,7 +148,7 @@
     <child  link="joint3_pitch_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <link name="joint3_pitch_link">
@@ -195,7 +195,7 @@
     <child  link="joint4_yaw_link"/>
     <origin xyz="0.325 0 0" rpy="0 0 0"/>
     <axis   xyz="0 0 1"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <joint name="joint4_pitch" type="revolute">
@@ -203,7 +203,7 @@
     <child  link="joint4_pitch_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <link name="joint4_pitch_link">
@@ -283,7 +283,7 @@
     <child  link="F1"/>
     <origin xyz="0 0 0.02" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
-    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
   </joint>
 
   <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
@@ -369,7 +369,7 @@
     <child  link="F2"/>
     <origin xyz="0 0 0.02" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
-    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
   </joint>
 
   <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
@@ -455,7 +455,7 @@
     <child  link="F3"/>
     <origin xyz="0 0 0.02" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
-    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
   </joint>
 
   <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
@@ -541,7 +541,7 @@
     <child  link="F4"/>
     <origin xyz="0 0 0.02" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
-    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
   </joint>
 
   <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
@@ -603,7 +603,7 @@
     <child  link="joint5_yaw_link"/>
     <origin xyz="0.325 0 0" rpy="0 0 0"/>      <!-- at end of L5 rod ({L6} start) -->
     <axis   xyz="0 0 1"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <joint name="joint5_pitch" type="revolute">
@@ -611,7 +611,7 @@
     <child  link="joint5_pitch_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>          <!-- coincident with yaw frame -->
     <axis   xyz="0 1 0"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <link name="joint5_pitch_link">
@@ -658,7 +658,7 @@
     <child  link="joint6_yaw_link"/>
     <origin xyz="0.325 0 0" rpy="0 0 0"/>         <!-- at end of L6 -->
     <axis   xyz="0 0 1"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <joint name="joint6_pitch" type="revolute">
@@ -666,7 +666,7 @@
     <child  link="joint6_pitch_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <link name="joint6_pitch_link">
@@ -712,7 +712,7 @@
     <child  link="joint7_yaw_link"/>
     <origin xyz="0.325 0 0" rpy="0 0 0"/>
     <axis   xyz="0 0 1"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <joint name="joint7_pitch" type="revolute">
@@ -720,7 +720,7 @@
     <child  link="joint7_pitch_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="2"/>
   </joint>
 
   <link name="joint7_pitch_link">
@@ -811,7 +811,7 @@
     <child  link="F5"/>
     <origin xyz="0 0 0.02" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
-    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
   </joint>
 
   <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
@@ -897,7 +897,7 @@
     <child  link="F6"/>
     <origin xyz="0 0 0.02" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
-    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
   </joint>
 
   <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
@@ -983,7 +983,7 @@
     <child  link="F7"/>
     <origin xyz="0 0 0.02" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
-    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
   </joint>
 
   <!-- ============  point‑mass rotors for inertia (D1)  ========== -->
@@ -1069,7 +1069,7 @@
     <child  link="F8"/>
     <origin xyz="0 0 0.02" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>                   <!-- θi tilt -->
-    <limit lower="-1.57" upper="1.57" effort="5" velocity="2"/>
+    <limit lower="-3.14" upper="3.14" effort="5" velocity="2"/>
   </joint>
 
   <!-- ============  point‑mass rotors for inertia (D1)  ========== -->

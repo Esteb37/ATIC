@@ -7,12 +7,12 @@ import concurrent.futures
 import multiprocessing
 
 # Parameters
-N_drones = 4
+N_drones = 9
 horizon = 6
 dim = 3
 rho = 15.0
 gamma = 50.0
-ell = 1.0
+ell = 0.35
 K_admm = 30
 T_sim = 50
 dt = 0.1
@@ -21,58 +21,59 @@ eps_pri = 1e-3
 eps_dual = 1e-3
 eps_neighbor = 1e-3
 use_neighbor_consensus = True
-tau = 1.0
 
-obstacles = [{"center": np.array([1.5, 1.5, -0.5]), "radius": 0.8}]
+obstacles = [{"center": np.array([1, 1.5, -0.5]), "radius": 0.8}]
 safety_margin = 0.2
 
 def dynamics(x, u):
     return x + dt * u
 
-def solve_drone_optimization(i, x_current_i, x_ref_i, x_global_i, alpha_i, x_pred, z, lambd):
+def solve_drone_optimization(i, x_current_i, x_ref_i, x_global_i, alpha_i, x_pred, z, lambd, w, mu):
     x = cp.Variable((horizon + 1, dim))
     u = cp.Variable((horizon, dim))
     cost = 0
     constraints = [x[0] == x_current_i]
 
     for t_h in range(horizon):
-        cost += cp.sum_squares(x[t_h] - x_ref_i) + \
-            0.1 * cp.sum_squares(u[t_h])
-        cost += (rho / 2) * \
-            cp.sum_squares(x[t_h] - x_global_i[t_h] - alpha_i[t_h])
+        cost += cp.sum_squares(x[t_h] - x_ref_i) + 0.1 * cp.sum_squares(u[t_h])
+        cost += (rho / 2) * cp.sum_squares(x[t_h] - x_global_i[t_h] + alpha_i[t_h])
         constraints += [
             x[t_h + 1] == x[t_h] + dt * u[t_h],
             cp.norm(u[t_h], 'inf') <= u_max
         ]
 
+        if t_h > 0:
+            cost += gamma * cp.sum_squares(x[t_h] - x[t_h - 1])
+
         if i < N_drones - 1:
             j = i + 1
-            cost += (rho / 2) * cp.sum_squares(x[t_h] -
-                                                x_pred[j, t_h] - z[i, t_h] + lambd[i, t_h]/rho)
-            # cost += cp.sum_squares(x_pred[i + 1, t_h] - x_ref[i + 1])
+            cost += (rho / 2) * cp.sum_squares(x[t_h] - x_pred[j, t_h] - z[i, t_h] + lambd[i, t_h]/rho)
 
         if i > 0:
             j = i - 1
-            cost += (rho / 2) * cp.sum_squares(x[t_h] -
-                                                x_pred[j, t_h] + z[j, t_h] - lambd[j, t_h] / rho)
-            # cost += cp.sum_squares(x_pred[i - 1, t_h] - x_ref[i - 1])
+            cost += (rho / 2) * cp.sum_squares(x[t_h] - x_pred[j, t_h] + z[j, t_h] - lambd[j, t_h] / rho)
+
+        if use_neighbor_consensus and 0 < i < N_drones - 1:
+            j_prev = i - 1
+            j_next = i + 1
+            second_order = x_pred[j_prev, t_h] - 2 * x[t_h] + x_pred[j_next, t_h]
+            cost += (rho / 2) * cp.sum_squares(second_order - w[i, t_h] + mu[i, t_h])
 
     prob = cp.Problem(cp.Minimize(cost), constraints)
     prob.solve(solver=cp.SCS, verbose=False)
     return i, x.value, u.value, prob.value
 
 def main():
-    # Initial setup
+        # Initial setup
     x_ref = np.array([[i * ell, 0.0, 0.0] for i in range(N_drones)])
+
+
     x_current = np.array([[0, i * ell, 0] for i in range(N_drones)])
     x_hist = [x_current.copy()]
     u_hist = []
-
-    # Initial prediction
     x_pred_next = np.repeat(x_current[:, None, :], horizon + 1, axis=1)
     u_pred_next = np.zeros((N_drones, horizon, dim))
-
-    residual_log = []  # List of lists: one per timestep, containing residuals per ADMM iteration
+    residual_log = []
     costs_log = []
 
     with concurrent.futures.ProcessPoolExecutor() as executor:  # moved outside the k loop
@@ -84,13 +85,15 @@ def main():
             alpha = np.zeros_like(x_pred)
             z = np.zeros((N_drones - 1, horizon, dim))
             lambd = np.zeros_like(z)
+            w = np.zeros((N_drones, horizon, dim))
+            mu = np.zeros_like(w)
 
             for k in range(K_admm):
                 x_prev = x_pred.copy()
                 iteration_cost = 0
 
                 args_list = [
-                    (i, x_current[i], x_ref[i], x_global[i], alpha[i], x_pred, z, lambd)
+                    (i, x_current[i], x_ref[i], x_global[i], alpha[i], x_pred, z, lambd, w, mu)
                     for i in range(N_drones)
                 ]
                 futures = [executor.submit(solve_drone_optimization, *args) for args in args_list]
@@ -100,12 +103,10 @@ def main():
                     u_pred[i] = u_val
                     iteration_cost += cost_val
 
-                # After all drones are solved for this ADMM iteration:
                 if k == 0:
-                    costs_log.append([])  # start cost log for this timestep
+                    costs_log.append([])
                 costs_log[-1].append(iteration_cost)
 
-                # Projection step (Obstacle avoidance)
                 for i in range(N_drones):
                     for t_h in range(horizon):
                         xg = x_pred[i, t_h] + alpha[i, t_h]
@@ -118,32 +119,47 @@ def main():
                                 xg = p + r * vec / (dist + 1e-6)
                         x_global[i, t_h] = xg
 
-                # Dual update for local-global constraint
-                alpha -= x_pred - x_global
+                alpha += x_pred - x_global
 
-                # Enforce fixed spacing: project z to be ell-distance vector
                 for i in range(N_drones - 1):
                     for t_h in range(horizon):
                         diff = x_pred[i, t_h] - x_pred[i + 1, t_h]
                         norm = np.linalg.norm(diff)
                         z[i, t_h] = ell * diff / (norm + 1e-6)
 
-                # ADMM dual update
                 for i in range(N_drones - 1):
                     for t_h in range(horizon):
-                        lambd[i, t_h] += tau * (x_pred[i, t_h] -
-                                        x_pred[i + 1, t_h] - z[i, t_h])
+                        lambd[i, t_h] += (x_pred[i, t_h] - x_pred[i + 1, t_h] - z[i, t_h])
 
-                # Residual check
+                if use_neighbor_consensus:
+                    for i in range(1, N_drones - 1):
+                        for t_h in range(horizon):
+                            diff = x_pred[i - 1, t_h] - 2 * x_pred[i, t_h] + x_pred[i + 1, t_h] + mu[i, t_h]
+                            w[i, t_h] = diff
+
+                    for i in range(1, N_drones - 1):
+                        for t_h in range(horizon):
+                            mu[i, t_h] += (
+                                x_pred[i - 1, t_h] - 2 * x_pred[i, t_h] + x_pred[i + 1, t_h] - w[i, t_h]
+                            )
+
                 r_pri = np.linalg.norm(x_pred - x_global)
                 r_dual = np.linalg.norm(x_pred - x_prev)
 
-                # Log the residuals for this ADMM iteration
-                if k == 0:
-                    residual_log.append([])  # Start new time step
-                residual_log[-1].append((r_dual, r_pri))
+                if use_neighbor_consensus:
+                    r_second_order = np.linalg.norm([
+                        x_pred[i - 1, t_h] - 2 * x_pred[i, t_h] + x_pred[i + 1, t_h] - w[i, t_h]
+                        for i in range(1, N_drones - 1)
+                        for t_h in range(horizon)
+                    ])
+                else:
+                    r_second_order = 0.0
 
-                if r_pri < eps_pri and r_dual < eps_dual:
+                if k == 0:
+                    residual_log.append([])
+                residual_log[-1].append((r_second_order, r_dual, r_pri))
+
+                if r_pri < eps_pri and r_dual < eps_dual and r_second_order < eps_neighbor:
                     print(f"[ADMM] Converged at iteration {k+1} at time step {t}")
                     break
 
@@ -157,32 +173,41 @@ def main():
             x_hist.append(x_next.copy())
             u_hist.append(u_apply.copy())
             x_current = x_next.copy()
+            np.save("mpc_solution_x.npy", np.array(x_hist))
+            np.save("mpc_solution_u.npy", np.array(u_hist))
 
     x_hist = np.array(x_hist)
 
     # ---------------------
     # Plot residuals over ADMM iterations for each timestep
     # ---------------------
-    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    fig, ax = plt.subplots(1, 3, figsize=(18, 5))
 
     for t, residuals in enumerate(residual_log):
-        dual_res = [r[0] for r in residuals]
-        primal_res = [r[1] for r in residuals]
-        ax[0].plot(dual_res, label=f"t={t}")
-        ax[1].plot(primal_res, label=f"t={t}")
+        neighbor_res = [r[0] for r in residuals]
+        dual_res = [r[1] for r in residuals]
+        primal_res = [r[2] for r in residuals]
+        ax[0].plot(neighbor_res, label=f"t={t}")
+        ax[1].plot(dual_res, label=f"t={t}")
+        ax[2].plot(primal_res, label=f"t={t}")
 
-
-    ax[0].set_title("Dual Residuals")
+    ax[0].set_title("Neighbor Consensus Residuals")
     ax[0].set_xlabel("ADMM Iteration")
     ax[0].set_ylabel("Residual")
     ax[0].set_yscale("log")
     ax[0].grid(True)
 
-    ax[1].set_title("Primal Residuals")
+    ax[1].set_title("Dual Residuals")
     ax[1].set_xlabel("ADMM Iteration")
     ax[1].set_ylabel("Residual")
     ax[1].set_yscale("log")
     ax[1].grid(True)
+
+    ax[2].set_title("Primal Residuals")
+    ax[2].set_xlabel("ADMM Iteration")
+    ax[2].set_ylabel("Residual")
+    ax[2].set_yscale("log")
+    ax[2].grid(True)
 
     plt.tight_layout()
     plt.savefig("admm_residuals_plot.png")
@@ -216,8 +241,8 @@ def main():
     def update(frame):
         ax.cla()
         ax.set_title(f"3D Drone Chain (Step {frame})")
-        ax.set_xlim(-1, 5)
-        ax.set_ylim(-1, 5)
+        ax.set_xlim(-1, 2)
+        ax.set_ylim(-1, 2)
         ax.set_zlim(-1, 2)
         ax.set_xlabel("X")
         ax.set_ylabel("Y")

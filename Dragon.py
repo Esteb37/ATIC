@@ -12,13 +12,26 @@ class Dragon:
 
     def __init__(self, urdf_path="dragon.urdf",
                  start_pos = np.array([0, 0, 3]),
-                 start_orientation = np.array([0, 0, 0])):
+                 start_orientation = np.array([0, 0, 0]), gravity = None):
+
+        if gravity is None:
+            self.GRAVITY = GRAVITY
+        else:
+            self.GRAVITY = gravity
 
         ####### Setup PyBullet #######
         p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        p.setGravity(0, 0, -GRAVITY)
-        p.loadURDF("plane.urdf")
+        p.setGravity(0, 0, -self.GRAVITY)
+        p.setPhysicsEngineParameter(numSolverIterations=200)
+        # p.setPhysicsEngineParameter(enableConeFriction=1)
+        p.setPhysicsEngineParameter(numSubSteps=5)
+        p.setPhysicsEngineParameter(solverResidualThreshold=1e-6)
+        p.setPhysicsEngineParameter(contactBreakingThreshold=0.05)
+        p.setTimeStep(1/240)
+
+        # p.loadURDF("plane.urdf")
+
 
         ####### Load Robot #######
         start_orientation = p.getQuaternionFromEuler(start_orientation)
@@ -33,8 +46,8 @@ class Dragon:
         self.num_rotors = len(self.rotor_names)
         self.num_modules = int(self.num_rotors / 2)
         self.kinematics = {}
-
         ####### Dynamics Variables #######
+
         self.rotor_thrusts = []
         self.external_forces = []
         self.center_of_gravity = np.zeros(3)
@@ -42,10 +55,15 @@ class Dragon:
 
         self._drawn_artists = [] # For plotting
 
+        self._pos_ref = []
+
         self.load_body_info()
         self.update_kinematics()
 
+        self.thrust([0] * self.num_rotors)
+
         self.F_G_z = np.linalg.norm(self.link_position("F1") - self.link_position("G1"))
+        self.MODULE_DISTANCE = np.linalg.norm(self.link_position("G2") - self.link_position("G1"))
 
     ####### Kinematics and Dynamics Methods #######
     def load_body_info(self):
@@ -334,7 +352,7 @@ class Dragon:
         idx = self._get_id(name_or_id)
         p.setJointMotorControl2(self.robot_id, idx, p.POSITION_CONTROL,
                                 targetPosition=value,
-                                force=10.0,
+                                force=100.0,
                                 maxVelocity=1.0)
 
     def set_joint_vel(self, name_or_id, value):
@@ -352,12 +370,22 @@ class Dragon:
         p.resetJointState(self.robot_id, idx, value)
 
     def hover(self):
-        self.thrust([GRAVITY * self.total_mass / self.num_rotors] * self.num_rotors)
+        self.thrust([self.GRAVITY * self.total_mass / self.num_rotors] * self.num_rotors)
 
     def lock_joints(self):
         # Lock all joints to their current positions
         for i in range(self.num_links):
             self.set_joint_pos(i, p.getJointState(self.robot_id, i)[0])
+
+    def reset_joints(self):
+        # Lock all joints to their current positions
+        for i in range(self.num_links):
+            self.set_joint_pos(i, 0)
+
+    def set_pos_ref(self, pos_ref):
+        if len(pos_ref) != self.num_modules + 1:
+            raise ValueError(f"Position reference must have {self.num_modules + 1} elements.")
+        self._pos_ref = pos_ref
 
     def step(self):
         p.stepSimulation()
@@ -367,13 +395,17 @@ class Dragon:
     def animate(self):
         self._init_plot()
         ani = FuncAnimation(self._fig, self._update_plot, interval=50)
-        plt.show()
+        return ani
+
+    def reset_start_pos_orn(self, pos, orn):
+        if len(pos) != 3:
+            raise ValueError("Position must be a 3-element vector.")
+
+        p.resetBasePositionAndOrientation(self.robot_id, pos, p.getQuaternionFromEuler(orn))
+        self.update_kinematics()
+
 
     def plot_on_ax(self, ax, CoG = True, forces = True):
-
-        ax.set_xlim([-0.5, 1])
-        ax.set_ylim([-0.5, 1])
-        ax.set_zlim([2, 4])
 
         self.update_kinematics()
 
@@ -405,7 +437,7 @@ class Dragon:
                 ax.quiver(
                     pos[0], pos[1], pos[2],
                     force[0], force[1], force[2],
-                    color='green', length=magnitude / GRAVITY * self.num_rotors, normalize=True
+                    color='green', length=magnitude/ (self.GRAVITY or 1) * self.num_rotors, normalize=True
                 )
 
             total_force = self.sum_of_forces()
@@ -414,7 +446,7 @@ class Dragon:
                 ax.quiver(
                     self.center_of_gravity[0], self.center_of_gravity[1], self.center_of_gravity[2],
                     total_force[0], total_force[1], total_force[2],
-                    color='black', length=force_magnitude / GRAVITY, normalize=True
+                    color='black', length=force_magnitude/ (self.GRAVITY or 1), normalize=True
                 )
 
             total_torque = self.sum_of_torques()
@@ -466,11 +498,12 @@ class Dragon:
         self._ax_robot = self._fig.add_subplot(122, projection='3d')
         self._scatter_cog_world = self._ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
         self._scatter_cog_robot = self._ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
+        self._scatter_pos_ref = [self._ax_world.scatter([], [], [], color='b', s=50) for _ in range(self.num_modules + 1)]
 
-        self._plot_plane(self._ax_world)
-        self._ax_world.set_xlim([-2, 5])
-        self._ax_world.set_ylim([-2, 2])
-        self._ax_world.set_zlim([0, 5])
+        # self._plot_plane(self._ax_world)
+        self._ax_world.set_xlim([-0.5, 3])
+        self._ax_world.set_ylim([-0.5, 3])
+        self._ax_world.set_zlim([-1, 1])
         self._ax_world.set_xlabel('X')
         self._ax_world.set_ylabel('Y')
         self._ax_world.set_zlabel('Z')
@@ -521,7 +554,7 @@ class Dragon:
             arrow = self._ax_robot.quiver(
                 rel_pos[0], rel_pos[1], rel_pos[2],
                 force[0], force[1], force[2],
-                color='green', length=magnitude / GRAVITY * self.num_rotors, normalize=True
+                color='green', length=magnitude/ (self.GRAVITY or 1) * self.num_rotors, normalize=True
             )
             self._drawn_artists.append(arrow)
 
@@ -531,7 +564,7 @@ class Dragon:
             arrow = self._ax_robot.quiver(
                 0, 0, 0,
                 total_force[0], total_force[1], total_force[2],
-                color='black', length=force_magnitude / GRAVITY, normalize=True
+                color='black', length=force_magnitude/ (self.GRAVITY or 1), normalize=True
             )
 
             self._drawn_artists.append(arrow)
@@ -546,6 +579,13 @@ class Dragon:
             )
             self._drawn_artists.append(arrow)
 
+        # Plot pos ref
+        if self._pos_ref is not None and len(self._pos_ref) > 0:
+            for i, pos_ref in enumerate(self._pos_ref):
+                if len(pos_ref) == 3:
+                    self._scatter_pos_ref[i]._offsets3d = ([pos_ref[0]], [pos_ref[1]], [pos_ref[2]])
+                else:
+                    self._scatter_pos_ref[i]._offsets3d = ([0], [0], [0])
 
     def _plot_plane(self, ax, size=2.0, z=0.0, color='gray', alpha=0.3):
         # Define the corners of the plane square

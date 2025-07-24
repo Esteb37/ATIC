@@ -4,7 +4,7 @@ import matplotlib.animation as animation
 import cvxpy as cp
 
 # Parameters
-N_drones = 8
+N_drones = 4
 horizon = 6
 dim = 3
 rho = 15.0
@@ -44,6 +44,7 @@ costs_log = []
 
 # ADMM-MPC loop
 for t in range(T_sim):
+    print(f"[ADMM] Time step {t+1}/{T_sim}")
     x_pred = x_pred_next.copy()
     u_pred = u_pred_next.copy()
     x_global = x_pred.copy()
@@ -151,6 +152,8 @@ for t in range(T_sim):
     x_hist.append(x_next.copy())
     u_hist.append(u_apply.copy())
     x_current = x_next.copy()
+    np.save("mpc_solution_x.npy", x_hist)
+    np.save("mpc_solution_u.npy", u_hist)
 
 x_hist = np.array(x_hist)
 
