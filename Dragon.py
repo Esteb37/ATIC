@@ -60,6 +60,8 @@ class Dragon:
         self.load_body_info()
         self.update_kinematics()
 
+        self.obstacles = None
+
         self.thrust([0] * self.num_rotors)
 
         self.F_G_z = np.linalg.norm(self.link_position("F1") - self.link_position("G1"))
@@ -401,7 +403,7 @@ class Dragon:
         if len(pos) != 3:
             raise ValueError("Position must be a 3-element vector.")
 
-        p.resetBasePositionAndOrientation(self.robot_id, pos, p.getQuaternionFromEuler(orn))
+        p.resetBasePositionAndOrientation(self.robot_id, pos, orn)
         self.update_kinematics()
 
 
@@ -500,6 +502,16 @@ class Dragon:
         self._scatter_cog_robot = self._ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
         self._scatter_pos_ref = [self._ax_world.scatter([], [], [], color='b', s=50) for _ in range(self.num_modules + 1)]
 
+        if self.obstacles is not None:
+            for obs in self.obstacles:
+                u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+                cx, cy, cz = obs["center"]
+                r = obs["radius"]
+                xs = r * np.cos(u) * np.sin(v) + cx
+                ys = r * np.sin(u) * np.sin(v) + cy
+                zs = r * np.cos(v) + cz
+                self._ax_world.plot_surface(xs, ys, zs, color='gray', alpha=0.3)
+
         # self._plot_plane(self._ax_world)
         self._ax_world.set_xlim([-0.5, 3])
         self._ax_world.set_ylim([-0.5, 3])
@@ -518,6 +530,15 @@ class Dragon:
         self._ax_robot.set_title('Forces')
 
         self._box_artists = []
+
+    def get_yaw_pitch(self, x_1, x_2):
+        dx = x_2[0] - x_1[0]
+        dy = x_2[1] - x_1[1]
+        dz = x_2[2] - x_1[2]
+
+        yaw = np.arctan2(dy, dx)
+        pitch = np.arctan2(dz, np.sqrt(dx**2 + dy**2))
+        return yaw, pitch
 
     def _update_plot(self, frame):
         for artist in self._drawn_artists:
@@ -581,11 +602,24 @@ class Dragon:
 
         # Plot pos ref
         if self._pos_ref is not None and len(self._pos_ref) > 0:
+
             for i, pos_ref in enumerate(self._pos_ref):
                 if len(pos_ref) == 3:
                     self._scatter_pos_ref[i]._offsets3d = ([pos_ref[0]], [pos_ref[1]], [pos_ref[2]])
                 else:
                     self._scatter_pos_ref[i]._offsets3d = ([0], [0], [0])
+
+            for i in range(0, self.num_modules):
+
+                yaw, pitch = self.get_yaw_pitch(self._pos_ref[i], self._pos_ref[i + 1])
+                arrow = self._ax_world.quiver(
+                    self._pos_ref[i][0], self._pos_ref[i][1], self._pos_ref[i][2],
+                    np.cos(yaw) * np.cos(pitch), np.sin(yaw) * np.cos(pitch), np.sin(pitch),
+                    color='red', length=self.MODULE_DISTANCE)
+                self._drawn_artists.append(arrow)
+
+
+
 
     def _plot_plane(self, ax, size=2.0, z=0.0, color='gray', alpha=0.3):
         # Define the corners of the plane square
