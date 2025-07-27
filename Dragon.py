@@ -23,7 +23,7 @@ class Dragon:
         p.connect(p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -self.GRAVITY)
-        p.setPhysicsEngineParameter(numSolverIterations=200)
+        p.setPhysicsEngineParameter(numSolverIterations=1000)
         # p.setPhysicsEngineParameter(enableConeFriction=1)
         p.setPhysicsEngineParameter(numSubSteps=5)
         p.setPhysicsEngineParameter(solverResidualThreshold=1e-6)

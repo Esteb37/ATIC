@@ -8,10 +8,10 @@ from scipy.spatial.transform import Rotation as R
 
 # Load MPC solution
 mpc_solution_x = np.load("mpc_solution_x.npy", allow_pickle=True)
-dragon = Dragon("dragon_long.urdf", gravity=0.0)
+dragon = Dragon(gravity=0.0)
 dt = 0.1
 
-obstacles = [{"center": np.array([1, 1.5, -0.5]), "radius": 0.8}]
+obstacles = [{"center": np.array([1, 1, -0.3]), "radius": 0.5}]
 
 dragon.obstacles = obstacles
 
@@ -50,6 +50,16 @@ def align(p1, p2):
         axis = np.cross(z_axis, v_norm)
         angle = np.arccos(np.dot(z_axis, v_norm))
         quat = R.from_rotvec(angle * axis / np.linalg.norm(axis)).as_quat()
+
+    # Make sure roll is zero
+    quat = R.from_quat(quat)
+    quat = quat.as_euler('xyz', degrees=False)
+    quat[0] = 0  # Set roll to zero
+    quat = R.from_euler('xyz', quat, degrees=False).as_quat()
+
+    # Convert to quaternion
+    quat = R.from_quat(quat)
+    quat = quat.as_quat()  # Convert to quaternion format (x, y, z, w)
 
     return quat.tolist()
 

@@ -7,14 +7,14 @@ import concurrent.futures
 import multiprocessing
 
 # Parameters
-N_drones = 9
+N_drones = 5
 horizon = 6
 dim = 3
 rho = 15.0
 gamma = 50.0
 ell = 0.35
 K_admm = 30
-T_sim = 50
+T_sim = 60
 dt = 0.1
 u_max = 1.0
 eps_pri = 1e-3
@@ -22,7 +22,7 @@ eps_dual = 1e-3
 eps_neighbor = 1e-3
 use_neighbor_consensus = True
 
-obstacles = [{"center": np.array([1, 1.5, -0.5]), "radius": 0.8}]
+obstacles = [{"center": np.array([1, 1, -0.3]), "radius": 0.5}]
 safety_margin = 0.2
 
 def dynamics(x, u):
@@ -65,7 +65,13 @@ def solve_drone_optimization(i, x_current_i, x_ref_i, x_global_i, alpha_i, x_pre
 
 def main():
         # Initial setup
-    x_ref = np.array([[i * ell, 0.0, 0.0] for i in range(N_drones)])
+    x_ref = np.array([[3 + ell, 0, 0],
+                      [3, 0, 0],
+                      [3, ell, 0],
+                      [3, 2 * ell, 0],
+                      [3 + ell, 2 * ell, 0]
+                      ])
+
 
 
     x_current = np.array([[0, i * ell, 0] for i in range(N_drones)])
