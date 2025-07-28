@@ -4,13 +4,13 @@ import matplotlib.animation as animation
 import cvxpy as cp
 
 # Parameters
-N_drones = 4
+N_drones = 5
 horizon = 6
 dim = 3
 rho = 15.0
-ell = 1.0
-K_admm = 100
-T_sim = 100
+ell = 0.35
+K_admm = 50
+T_sim = 60
 dt = 0.1
 u_max = 1.0
 eps_pri = 1e-3
@@ -18,7 +18,7 @@ eps_dual = 1e-3
 tau = 1.0
 
 # Obstacles
-obstacles = [{"center": np.array([1.5, 2.5, -0.5]), "radius": 0.8}]
+obstacles = [{"center": np.array([1, 1, -0.3]), "radius": 0.5}]
 safety_margin = 0.2
 # obstacles = []  # No obstacles in this version
 
@@ -30,10 +30,18 @@ def dynamics(x, u):
 
 
 # Initial setup
-x_ref = np.array([[i * ell, 0.0, 0.0] for i in range(N_drones)])
+x_ref = np.array([[3 + ell, 0, 0],
+                    [3, 0, 0],
+                    [3, ell, 0],
+                    [3, 2 * ell, 0],
+                    [3 + ell, 2 * ell, 0]
+                ])
+
 x_current = np.array([[0, i * ell, 0] for i in range(N_drones)])
 x_hist = [x_current.copy()]
 u_hist = []
+
+dist_hist = []
 
 # Initial prediction
 x_pred_next = np.repeat(x_current[:, None, :], horizon + 1, axis=1)
@@ -41,6 +49,7 @@ u_pred_next = np.zeros((N_drones, horizon, dim))
 
 residual_log = []  # List of lists: one per timestep, containing residuals per ADMM iteration
 costs_log = []
+
 
 # ADMM-MPC loop
 for t in range(T_sim):
@@ -152,10 +161,18 @@ for t in range(T_sim):
     x_hist.append(x_next.copy())
     u_hist.append(u_apply.copy())
     x_current = x_next.copy()
-    np.save("mpc_solution_x.npy", x_hist)
-    np.save("mpc_solution_u.npy", u_hist)
+
+    dists = []
+    for i in range(N_drones - 1):
+        p1, p2 = x_next[i], x_next[i + 1]
+        midpoint = (p1 + p2) / 2
+        dist = np.linalg.norm(p1 - p2)
+        dists.append(dist)
+    dist_hist.append(dists)
 
 x_hist = np.array(x_hist)
+np.save("x_hist.npy", x_hist)
+np.save("dist_hist.npy", dist_hist)
 
 # ---------------------
 # Plot residuals over ADMM iterations for each timestep

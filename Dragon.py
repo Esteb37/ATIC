@@ -498,9 +498,10 @@ class Dragon:
         self._fig = plt.figure(figsize=(10, 10))
         self._ax_world = self._fig.add_subplot(121, projection='3d')
         self._ax_robot = self._fig.add_subplot(122, projection='3d')
-        self._scatter_cog_world = self._ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
+        # self._scatter_cog_world = self._ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
         self._scatter_cog_robot = self._ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
-        self._scatter_pos_ref = [self._ax_world.scatter([], [], [], color='b', s=50) for _ in range(self.num_modules + 1)]
+        colors = ["blue","orange","green","red","purple", "brown", "pink", "gray", "lightgreen"]
+        self._scatter_pos_ref = [self._ax_world.scatter([], [], [], color=colors[i], s=40) for i in range(self.num_modules + 1)]
 
         if self.obstacles is not None:
             for obs in self.obstacles:
@@ -521,13 +522,14 @@ class Dragon:
         self._ax_world.set_zlabel('Z')
         self._ax_world.set_title('Flight Simulation')
 
-        self._ax_robot.set_xlim([-1, 1])
-        self._ax_robot.set_ylim([-1, 1])
-        self._ax_robot.set_zlim([-1, 1])
+        self._ax_robot.set_xlim([-0.5, 1])
+        self._ax_robot.set_ylim([-0.75, 0.75])
+        self._ax_robot.set_zlim([-0.75, 0.75])
         self._ax_robot.set_xlabel('X')
         self._ax_robot.set_ylabel('Y')
         self._ax_robot.set_zlabel('Z')
-        self._ax_robot.set_title('Forces')
+        self._ax_robot.set_title('Shape')
+        self._ax_robot.legend()
 
         self._box_artists = []
 
@@ -566,7 +568,7 @@ class Dragon:
                 self._draw_box(self._ax_robot, rel_pos, orn, dims, color)
 
         cog = self.center_of_gravity
-        self._scatter_cog_world._offsets3d = ([cog[0]], [cog[1]], [cog[2]])
+        # self._scatter_cog_world._offsets3d = ([cog[0]], [cog[1]], [cog[2]])
         self._scatter_cog_robot._offsets3d = ([0], [0], [0])
 
         for pos, force in self.external_forces:

@@ -247,9 +247,9 @@ def main():
     def update(frame):
         ax.cla()
         ax.set_title(f"3D Drone Chain (Step {frame})")
-        ax.set_xlim(-1, 2)
-        ax.set_ylim(-1, 2)
-        ax.set_zlim(-1, 2)
+        ax.set_xlim([-0.5, 3])
+        ax.set_ylim([-0.5, 3])
+        ax.set_zlim([-1, 1])
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")

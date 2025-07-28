@@ -8,7 +8,15 @@ from scipy.spatial.transform import Rotation as R
 
 # Load MPC solution
 mpc_solution_x = np.load("mpc_solution_x.npy", allow_pickle=True)
-dragon = Dragon(gravity=0.0)
+
+if len(mpc_solution_x[0]) == 5:
+    urdf = "dragon.urdf"
+elif len(mpc_solution_x[0]) == 9:
+    urdf = "dragon_long.urdf"
+else:
+    raise ValueError("Invalid MPC solution format. Expected 5 or 9 elements per position.")
+
+dragon = Dragon(urdf, gravity=0.0)
 dt = 0.1
 
 obstacles = [{"center": np.array([1, 1, -0.3]), "radius": 0.5}]
@@ -82,15 +90,15 @@ def sim_loop(dragon: Dragon):
             abs_orients.append((yaw_i, pitch_i))
 
         # Set relative joints
-        for i in range(1, dragon.num_modules):
-            yaw_prev, pitch_prev = abs_orients[i-1]
+        for i in range(dragon.num_modules - 1):
             yaw_curr, pitch_curr = abs_orients[i]
+            yaw_next, pitch_next = abs_orients[i + 1]
 
-            rel_yaw   = angle_diff(yaw_curr,  yaw_prev)
-            rel_pitch = angle_diff(pitch_curr, pitch_prev)
+            rel_yaw   = angle_diff(yaw_next,  yaw_curr)
+            rel_pitch = angle_diff(pitch_next, pitch_curr)
 
-            dragon.reset_joint_pos(f"joint{i}_yaw",   rel_yaw)
-            dragon.reset_joint_pos(f"joint{i}_pitch", -rel_pitch)
+            dragon.reset_joint_pos(f"joint{i + 1}_yaw",   rel_yaw)
+            dragon.reset_joint_pos(f"joint{i + 1}_pitch", -rel_pitch)
 
         dragon.step()
         time.sleep(dt)
