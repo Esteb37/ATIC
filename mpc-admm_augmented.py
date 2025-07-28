@@ -67,7 +67,7 @@ for t in range(T_sim):
                 cost += cp.sum_squares(x[t_h] - x_ref[i]) + \
                     0.1 * cp.sum_squares(u[t_h])
                 cost += (rho / 2) * \
-                    cp.sum_squares(x[t_h] - x_global[i, t_h] - alpha[i, t_h])
+                    cp.sum_squares(x[t_h] - x_global[i, t_h] + alpha[i, t_h])
                 constraints += [
                     x[t_h + 1] == x[t_h] + dt * u[t_h],
                     cp.norm(u[t_h], 'inf') <= u_max
