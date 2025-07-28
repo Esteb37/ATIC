@@ -1,5 +1,23 @@
 <?xml version="1.0"?>
-<robot name="L1">
+<robot name="joint0_yaw_link">
+  <link name="joint0_yaw_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+    <collision name="joint0_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint0_yaw" type="fixed">
+    <parent link="joint0_yaw_link"/>
+    <child  link="L1"/>
+    <origin xyz="0.025 0 0" rpy="0 0 0"/>
+  </joint>
   <link name="L1">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -175,6 +193,25 @@
       <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
     </inertial>
   </link>
+
+  <link name="joint4_yaw_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+    <collision name="joint4_body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="joint4_yaw" type="fixed">
+    <parent link="L4"/>
+    <child  link="joint4_yaw_link"/>
+    <origin xyz="0.325 0 0" rpy="0 0 0"/>
+  </joint>
 
   <!-- =============================================================
        VECTORING APPARATUS Gi & Fi  (identical pattern for each link)

@@ -72,7 +72,9 @@ def align(p1, p2):
     return quat.tolist()
 
 def sim_loop(dragon: Dragon):
-    for pos in mpc_solution_x:
+    dist_hist = []
+    sim_dist_hist = []
+    for i, pos in enumerate(mpc_solution_x):
         dragon.set_pos_ref(pos)
         abs_orients = []
 
@@ -85,9 +87,23 @@ def sim_loop(dragon: Dragon):
         dragon.reset_joints()
 
         # Compute absolute for each subsequent module
+        dists = []
+
+        for i in range(1, dragon.num_modules + 1):
+            dist = np.linalg.norm(np.array(pos[i]) - np.array(pos[i-1]))
+            dists.append(dist)
+
+        sim_dists = []
+        for i in range(0, dragon.num_modules):
+            dist = np.linalg.norm(pos[i] - dragon.link_position(f"joint{i}_yaw"))
+            sim_dists.append(dist)
+
         for i in range(1, dragon.num_modules):
             yaw_i, pitch_i = get_yaw_pitch(pos[i], pos[i+1])
             abs_orients.append((yaw_i, pitch_i))
+
+        dist_hist.append(dists)
+        sim_dist_hist.append(sim_dists)
 
         # Set relative joints
         for i in range(dragon.num_modules - 1):
@@ -103,13 +119,36 @@ def sim_loop(dragon: Dragon):
         dragon.step()
         time.sleep(dt)
 
+    # Plot dist_hist
+    dist_hist = np.array(dist_hist)
+    return dist_hist, sim_dist_hist
+
     print("Simulation completed.")
 
 def main():
+    """
     threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
     ani = dragon.animate()
+    """
+    dist_hist, sim_dist_hist = sim_loop(dragon)
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    ax[0].plot(dist_hist)
+    ax[0].set_title("Distances between agents")
+    ax[0].set_xlabel("Time step")
+    ax[0].set_ylabel("Distance (m)")
+    ax[0].set_ylim(0.34, 0.36)
+    ax[0].grid(True)
+    ax[1].plot(sim_dist_hist)
+    ax[1].set_title("Distances between modules")
+    ax[1].set_xlabel("Time step")
+    ax[1].set_ylabel("Distance (m)")
+    ax[1].grid(True)
+
+
     plt.show()
-    ani.save("mpc_simulation.gif", writer="pillow", fps=1/dt)
+
+
+
 
 if __name__ == "__main__":
     main()

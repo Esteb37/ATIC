@@ -65,7 +65,7 @@ class Dragon:
         self.thrust([0] * self.num_rotors)
 
         self.F_G_z = np.linalg.norm(self.link_position("F1") - self.link_position("G1"))
-        self.MODULE_DISTANCE = np.linalg.norm(self.link_position("G2") - self.link_position("G1"))
+        self.MODULE_DISTANCE = np.linalg.norm(self.link_position("joint0_yaw") - self.link_position("joint1_yaw"))
 
     ####### Kinematics and Dynamics Methods #######
     def load_body_info(self):
