@@ -7,7 +7,7 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 
 # Load MPC solution
-mpc_solution_x = np.load("mpc_solution_x.npy", allow_pickle=True)
+mpc_solution_x = np.load("x_hist_test.npy", allow_pickle=True)
 
 if len(mpc_solution_x[0]) == 5:
     urdf = "dragon.urdf"
@@ -73,6 +73,7 @@ def align(p1, p2):
 
 def sim_loop(dragon: Dragon):
     for pos in mpc_solution_x:
+        print(pos)
         dragon.set_pos_ref(pos)
         abs_orients = []
 
