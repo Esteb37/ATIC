@@ -10,7 +10,7 @@ GRAVITY = 9.81
 
 class Dragon:
 
-    def __init__(self, urdf_path="dragon.urdf",
+    def __init__(self, urdf_path="assets/dragon.urdf",
                  start_pos = np.array([0, 0, 3]),
                  start_orientation = np.array([0, 0, 0]), gravity = None):
 
@@ -66,7 +66,6 @@ class Dragon:
 
         self.F_G_z = np.linalg.norm(self.link_position("F1") - self.link_position("G1"))
         self.MODULE_DISTANCE = np.linalg.norm(self.link_position("joint0_yaw") - self.link_position("joint1_yaw"))
-        print(self.MODULE_DISTANCE)
 
     ####### Kinematics and Dynamics Methods #######
     def load_body_info(self):

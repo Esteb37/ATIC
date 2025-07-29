@@ -5,21 +5,25 @@ import threading
 import time
 import pybullet as p
 from scipy.spatial.transform import Rotation as R
+import scenarios
+
+scenario = scenarios.USHAPE_5
+
+savefile = scenario["savefile"]
+obstacles =  scenario["obstacles"]
 
 # Load MPC solution
-mpc_solution_x = np.load("mpc_solution_x.npy", allow_pickle=True)
+mpc_path = np.load(f"{savefile}.npy", allow_pickle=True)
 
-if len(mpc_solution_x[0]) == 5:
-    urdf = "dragon.urdf"
-elif len(mpc_solution_x[0]) == 9:
-    urdf = "dragon_long.urdf"
+if len(mpc_path[0]) == 5:
+    urdf = "assets/dragon.urdf"
+elif len(mpc_path[0]) == 9:
+    urdf = "assets/dragon_long.urdf"
 else:
     raise ValueError("Invalid MPC solution format. Expected 5 or 9 elements per position.")
 
 dragon = Dragon(urdf, gravity=0.0)
 dt = 0.1
-
-obstacles = [{"center": np.array([1, 1, -0.3]), "radius": 0.5}]
 
 dragon.obstacles = obstacles
 
@@ -75,7 +79,7 @@ def sim_loop(dragon: Dragon):
     dist_hist = []
     sim_dist_hist = []
 
-    for i, pos in enumerate(mpc_solution_x):
+    for i, pos in enumerate(mpc_path):
         dragon.set_pos_ref(pos)
 
         abs_orients = []
@@ -124,15 +128,13 @@ def sim_loop(dragon: Dragon):
     dist_hist = np.array(dist_hist)
     return dist_hist, sim_dist_hist
 
-    print("Simulation completed.")
 
 
 def main():
 
-    """
     threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
     ani = dragon.animate()
-    """
+    ani.save(f"saves/{savefile}_simulation.gif", writer='pillow', fps=(1 / dt))
 
     dist_hist, sim_dist_hist = sim_loop(dragon)
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))
@@ -147,11 +149,7 @@ def main():
     ax[1].set_xlabel("Time step")
     ax[1].set_ylabel("Distance (m)")
     ax[1].grid(True)
-
-
-    plt.show()
-
-
+    plt.savefig(f"saves/{savefile}_distances_plot.png")
 
 
 if __name__ == "__main__":

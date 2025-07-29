@@ -2,29 +2,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import cvxpy as cp
+import scenarios
+
+scenario = scenarios.USHAPE_5
+
+savefile =  scenario["savefile"]
+obstacles =  scenario["obstacles"]
+x_ref =  scenario["x_ref"]
+x_current = scenario["x_current"]
+N_drones =  scenario["N_drones"]
+K_admm =  scenario["K_admm"]
+T_sim =  scenario["T_sim"]
+
 # Parameters
-N_drones = 5
 horizon = 6
 dim = 3
 rho = 15.0
-
-ell = 0.35
-K_admm = 100
-T_sim = 60
 dt = 0.1
 u_max = 1.0
 eps_pri = 1e-3
 eps_dual = 1e-3
 tau = 1.0
-
-# Obstacles
-obstacles = [{"center": np.array([1, 1, -0.3]), "radius": 0.5}]
 safety_margin = 0.2
-# obstacles = []  # No obstacles in this version
 
 # Dynamics
-
-
 def dynamics(x, u):
     return x + dt * u
 
@@ -157,7 +158,8 @@ for t in range(T_sim):
     x_hist.append(x_next.copy())
     u_hist.append(u_apply.copy())
     x_current = x_next.copy()
-    np.save("x_hist.npy", x_hist)  # Save history for later use
+    np.save(f"saves/{savefile}.npy", np.array(x_hist))
+  # Save history for later use
 
 x_hist = np.array(x_hist)
 
@@ -186,7 +188,7 @@ ax[1].set_yscale("log")
 ax[1].grid(True)
 
 plt.tight_layout()
-plt.savefig("admm_residuals_plot.png")
+plt.savefig(f"saves/{savefile}_admm_residuals.png")
 plt.show()
 
 # ---------------------
@@ -203,7 +205,7 @@ ax2.set_ylabel("Objective Cost")
 ax2.grid(True)
 # ax2.legend(fontsize=8)
 plt.tight_layout()
-plt.savefig("admm_costs_plot.png")
+plt.savefig(f"{savefile}_admm_costs.png")
 plt.show()
 
 
@@ -252,6 +254,6 @@ def update(frame):
 
 
 ani = animation.FuncAnimation(fig, update, frames=T_sim, interval=100)
-ani.save("drone_chain_admm_augmented_obstacles.gif",
+ani.save(f"saves/{savefile}_admm_output.gif",
          writer="pillow", fps=int(1/dt))
-# plt.show()
+plt.show()
