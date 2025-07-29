@@ -1,6 +1,6 @@
 import numpy as np
 import cvxpy as cp
-import Dragon as Dragon
+import sim.Dragon as Dragon
 import pybullet as p
 import threading
 

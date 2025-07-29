@@ -1,4 +1,4 @@
-from Dragon import Dragon
+from sim.Dragon import Dragon
 import threading
 
 def sim_loop(dragon: Dragon):

@@ -1,4 +1,4 @@
-from Dragon import Dragon
+from sim.Dragon import Dragon
 import numpy as np
 import matplotlib.pyplot as plt
 import threading
@@ -7,7 +7,7 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 
 # Load MPC solution
-mpc_solution_x = np.load("x_hist.npy", allow_pickle=True)
+mpc_solution_x = np.load("mpc_solution_x.npy", allow_pickle=True)
 
 if len(mpc_solution_x[0]) == 5:
     urdf = "dragon.urdf"
@@ -74,8 +74,10 @@ def align(p1, p2):
 def sim_loop(dragon: Dragon):
     dist_hist = []
     sim_dist_hist = []
+
     for i, pos in enumerate(mpc_solution_x):
         dragon.set_pos_ref(pos)
+
         abs_orients = []
 
         # Absolute orientation of first link
@@ -84,7 +86,6 @@ def sim_loop(dragon: Dragon):
 
         # Place base link
         dragon.reset_start_pos_orn(pos[0], align(pos[0], pos[1]))
-        dragon.reset_joints()
 
         # Compute absolute for each subsequent module
         dists = []
@@ -93,31 +94,31 @@ def sim_loop(dragon: Dragon):
             dist = np.linalg.norm(np.array(pos[i]) - np.array(pos[i-1]))
             dists.append(dist)
 
-        sim_dists = []
-        for i in range(0, dragon.num_modules):
-            dist = np.linalg.norm(pos[i] - dragon.link_position(f"joint{i}_yaw"))
-            sim_dists.append(dist)
-
         for i in range(1, dragon.num_modules):
             yaw_i, pitch_i = get_yaw_pitch(pos[i], pos[i+1])
             abs_orients.append((yaw_i, pitch_i))
-
-        dist_hist.append(dists)
-        sim_dist_hist.append(sim_dists)
 
         # Set relative joints
         for i in range(dragon.num_modules - 1):
             yaw_curr, pitch_curr = abs_orients[i]
             yaw_next, pitch_next = abs_orients[i + 1]
 
-            rel_yaw   = angle_diff(yaw_next,  yaw_curr)
+            rel_yaw   = angle_diff(yaw_next, yaw_curr)
             rel_pitch = angle_diff(pitch_next, pitch_curr)
 
             dragon.reset_joint_pos(f"joint{i + 1}_yaw",   rel_yaw)
             dragon.reset_joint_pos(f"joint{i + 1}_pitch", -rel_pitch)
 
-        dragon.step()
-        time.sleep(dt)
+            dragon.step()
+            time.sleep(dt)
+
+            sim_dists = []
+            for i in range(0, dragon.num_modules):
+                dist = np.linalg.norm(pos[i] - dragon.link_position(f"joint{i}_yaw"))
+                sim_dists.append(dist)
+
+        dist_hist.append(dists)
+        sim_dist_hist.append(sim_dists)
 
     # Plot dist_hist
     dist_hist = np.array(dist_hist)
@@ -125,11 +126,14 @@ def sim_loop(dragon: Dragon):
 
     print("Simulation completed.")
 
+
 def main():
+
     """
     threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
     ani = dragon.animate()
     """
+
     dist_hist, sim_dist_hist = sim_loop(dragon)
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))
     ax[0].plot(dist_hist)

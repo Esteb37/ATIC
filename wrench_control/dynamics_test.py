@@ -1,4 +1,4 @@
-from Dragon import Dragon
+from sim.Dragon import Dragon
 import numpy as np
 import matplotlib.pyplot as plt
 import pybullet as p

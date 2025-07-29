@@ -66,6 +66,7 @@ class Dragon:
 
         self.F_G_z = np.linalg.norm(self.link_position("F1") - self.link_position("G1"))
         self.MODULE_DISTANCE = np.linalg.norm(self.link_position("joint0_yaw") - self.link_position("joint1_yaw"))
+        print(self.MODULE_DISTANCE)
 
     ####### Kinematics and Dynamics Methods #######
     def load_body_info(self):
@@ -355,7 +356,7 @@ class Dragon:
         p.setJointMotorControl2(self.robot_id, idx, p.POSITION_CONTROL,
                                 targetPosition=value,
                                 force=100.0,
-                                maxVelocity=1.0)
+                                maxVelocity=10.0)
 
     def set_joint_vel(self, name_or_id, value):
         idx = self._get_id(name_or_id)
@@ -494,6 +495,14 @@ class Dragon:
         ax.add_collection3d(box)
         self._drawn_artists.append(box)
 
+    def _draw_sphere(self, ax, center, radius, color):
+        u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+        x = radius * np.cos(u) * np.sin(v) + center[0]
+        y = radius * np.sin(u) * np.sin(v) + center[1]
+        z = radius * np.cos(v) + center[2]
+        sphere = ax.plot_surface(x, y, z, color=color, alpha=1)
+        self._drawn_artists.append(sphere)
+
     def _init_plot(self):
         self._fig = plt.figure(figsize=(10, 10))
         self._ax_world = self._fig.add_subplot(121, projection='3d')
@@ -554,7 +563,6 @@ class Dragon:
 
             if len(name) != 2:
                 continue
-
             if name[0] == "L":
                 offset = [0.15, 0, 0]
                 offset = p.rotateVector(orn, offset)

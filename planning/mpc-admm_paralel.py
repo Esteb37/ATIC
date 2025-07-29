@@ -13,14 +13,15 @@ dim = 3
 rho = 15.0
 gamma = 50.0
 ell = 0.35
-K_admm = 30
+K_admm = 50
 T_sim = 60
 dt = 0.1
 u_max = 1.0
 eps_pri = 1e-3
 eps_dual = 1e-3
 eps_neighbor = 1e-3
-use_neighbor_consensus = True
+use_neighbor_consensus = False
+tau = 1.0
 
 obstacles = [{"center": np.array([1, 1, -0.3]), "radius": 0.5}]
 safety_margin = 0.2
@@ -135,7 +136,7 @@ def main():
 
                 for i in range(N_drones - 1):
                     for t_h in range(horizon):
-                        lambd[i, t_h] += (x_pred[i, t_h] - x_pred[i + 1, t_h] - z[i, t_h])
+                        lambd[i, t_h] += tau * (x_pred[i, t_h] - x_pred[i + 1, t_h] - z[i, t_h])
 
                 if use_neighbor_consensus:
                     for i in range(1, N_drones - 1):
