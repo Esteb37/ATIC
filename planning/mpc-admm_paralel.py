@@ -7,7 +7,7 @@ import concurrent.futures
 import multiprocessing
 import scenarios
 
-scenario = scenarios.USHAPE_5
+scenario = scenarios.LINE_9
 
 ell = scenarios.ell
 savefile =  scenario["savefile"]
@@ -221,8 +221,13 @@ def main():
     def update(frame):
         ax.cla()
         ax.set_title(f"3D Drone Chain (Step {frame})")
-        ax.set_xlim(-1, 5)
-        ax.set_ylim(-1, 5)
+        min_x = np.min(x_hist[:, :, 0]) - 0.3
+        max_x = np.max(x_hist[:, :, 0]) + 0.3
+        min_y = np.min(x_hist[:, :, 1]) - 0.3
+        max_y = np.max(x_hist[:, :, 1]) + 0.3
+
+        ax.set_xlim(min_x, max_x)
+        ax.set_ylim(min_y, max_y)
         ax.set_zlim(-1, 2)
         ax.set_xlabel("X")
         ax.set_ylabel("Y")

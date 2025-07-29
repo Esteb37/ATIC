@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from sim.Dragon import Dragon
 import numpy as np
 import matplotlib.pyplot as plt

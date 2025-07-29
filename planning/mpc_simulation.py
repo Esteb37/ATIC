@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from sim.Dragon import Dragon
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,13 +11,13 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 import scenarios
 
-scenario = scenarios.USHAPE_5
+scenario = scenarios.LINE_9
 
 savefile = scenario["savefile"]
 obstacles =  scenario["obstacles"]
 
 # Load MPC solution
-mpc_path = np.load(f"{savefile}.npy", allow_pickle=True)
+mpc_path = np.load(f"saves/{savefile}.npy", allow_pickle=True)
 
 if len(mpc_path[0]) == 5:
     urdf = "assets/dragon.urdf"
@@ -113,36 +117,26 @@ def sim_loop(dragon: Dragon):
             dragon.reset_joint_pos(f"joint{i + 1}_yaw",   rel_yaw)
             dragon.reset_joint_pos(f"joint{i + 1}_pitch", -rel_pitch)
 
-            dragon.step()
-            time.sleep(dt)
+        dragon.step()
+        time.sleep(dt)
 
-            sim_dists = []
-            for i in range(0, dragon.num_modules):
-                dist = np.linalg.norm(pos[i] - dragon.link_position(f"joint{i}_yaw"))
-                sim_dists.append(dist)
+        sim_dists = []
+        for i in range(0, dragon.num_modules):
+            dist = np.linalg.norm(pos[i] - dragon.link_position(f"joint{i}_yaw"))
+            sim_dists.append(dist)
 
         dist_hist.append(dists)
         sim_dist_hist.append(sim_dists)
 
     # Plot dist_hist
     dist_hist = np.array(dist_hist)
-    return dist_hist, sim_dist_hist
 
-
-
-def main():
-
-    threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
-    ani = dragon.animate()
-    ani.save(f"saves/{savefile}_simulation.gif", writer='pillow', fps=(1 / dt))
-
-    dist_hist, sim_dist_hist = sim_loop(dragon)
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))
     ax[0].plot(dist_hist)
     ax[0].set_title("Distances between agents")
     ax[0].set_xlabel("Time step")
     ax[0].set_ylabel("Distance (m)")
-    ax[0].set_ylim(0.34, 0.36)
+    ax[0].set_ylim(0.9, 1.1)
     ax[0].grid(True)
     ax[1].plot(sim_dist_hist)
     ax[1].set_title("Distances between modules")
@@ -150,6 +144,14 @@ def main():
     ax[1].set_ylabel("Distance (m)")
     ax[1].grid(True)
     plt.savefig(f"saves/{savefile}_distances_plot.png")
+
+    print("Simulation completed.")
+
+def main():
+    threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
+    ani = dragon.animate()
+    plt.show()
+    #ani.save(f"saves/{savefile}_simulation.gif", writer="pillow", fps=int(1/dt))
 
 
 if __name__ == "__main__":
