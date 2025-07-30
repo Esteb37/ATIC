@@ -11,7 +11,7 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 import scenarios
 
-scenario = scenarios.LINE_9
+scenario = scenarios.USHAPE_9
 
 savefile = scenario["savefile"]
 obstacles =  scenario["obstacles"]
@@ -26,10 +26,9 @@ elif len(mpc_path[0]) == 9:
 else:
     raise ValueError("Invalid MPC solution format. Expected 5 or 9 elements per position.")
 
-dragon = Dragon(urdf, gravity=0.0)
+
 dt = 0.1
 
-dragon.obstacles = obstacles
 
 def angle_diff(a, b):
     """Return the difference a−b wrapped to [−π, π]."""
@@ -83,7 +82,7 @@ def sim_loop(dragon: Dragon):
     dist_hist = []
     sim_dist_hist = []
 
-    for i, pos in enumerate(mpc_path):
+    for t, pos in enumerate(mpc_path):
         dragon.set_pos_ref(pos)
 
         abs_orients = []
@@ -127,31 +126,43 @@ def sim_loop(dragon: Dragon):
 
         dist_hist.append(dists)
         sim_dist_hist.append(sim_dists)
+        print(f"Step {t+1}/{len(mpc_path)}")
 
-    # Plot dist_hist
-    dist_hist = np.array(dist_hist)
+    return np.array(dist_hist), np.array(sim_dist_hist)
+
+
+def main():
+    dragon = Dragon(urdf, gravity=0.0)
+    dragon.obstacles = obstacles
+
+    dist_hist, sim_dist_hist = sim_loop(dragon)
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))
-    ax[0].plot(dist_hist)
-    ax[0].set_title("Distances between agents")
+    ax[0].plot(dist_hist, label = [f"{i}->{i+1}" for i in range(dragon.num_modules)])
+
+    # Horizontal line at ell
+    ell = dragon.MODULE_DISTANCE
+    ax[0].axhline(y=ell, color='r', linestyle='--', label='Module distance (ell)')
+    ymin = np.min(dist_hist)
+    ymax = np.max(dist_hist)
+    margin = 0.05 * (ymax - ymin)  # optional small buffer
+    ax[0].set_ylim(ymin - margin, ymax + margin)
+    ax[0].legend()
+    ax[0].set_title("Rigid constraint violation")
     ax[0].set_xlabel("Time step")
     ax[0].set_ylabel("Distance (m)")
-    ax[0].set_ylim(0.9, 1.1)
     ax[0].grid(True)
-    ax[1].plot(sim_dist_hist)
-    ax[1].set_title("Distances between modules")
+    ax[1].plot(sim_dist_hist, label = [f"Module {i}" for i in range(dragon.num_modules)])
+    ax[1].set_title("Simulation tracking error")
     ax[1].set_xlabel("Time step")
     ax[1].set_ylabel("Distance (m)")
     ax[1].grid(True)
+    ax[1].legend()
     plt.savefig(f"saves/{savefile}_distances_plot.png")
 
-    print("Simulation completed.")
+    print("Distances plot saved")
 
-def main():
-    threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
-    ani = dragon.animate()
-    plt.show()
-    #ani.save(f"saves/{savefile}_simulation.gif", writer="pillow", fps=int(1/dt))
+
 
 
 if __name__ == "__main__":

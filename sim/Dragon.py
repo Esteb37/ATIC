@@ -65,7 +65,6 @@ class Dragon:
 
         self.F_G_z = np.linalg.norm(self.link_position("F1") - self.link_position("G1"))
         self.MODULE_DISTANCE = np.linalg.norm(self.link_position("joint0_yaw") - self.link_position("joint1_yaw"))
-        print(self.MODULE_DISTANCE)
 
     ####### Kinematics and Dynamics Methods #######
     def load_body_info(self):
@@ -89,7 +88,7 @@ class Dragon:
                 dims = shape_data[0][3]
                 self.kinematics[name]["dimensions"] = [d for d in dims]
             else:
-                self.kinematics[name]["dimensions"] = np.array([0.3, 0.05, 0.05])
+                self.kinematics[name]["dimensions"] = np.array([0.86, 0.1, 0.05])
 
             if mass > 0:
                 self.total_mass += mass
@@ -420,7 +419,7 @@ class Dragon:
                 continue
 
             if name[0] == "L":
-                offset = [0.15, 0, 0]
+                offset = [-1, 0, 0]
                 offset = p.rotateVector(orn, offset)
                 pos = [pos[i] + offset[i] for i in range(3)]
 
@@ -522,16 +521,16 @@ class Dragon:
                 self._ax_world.plot_surface(xs, ys, zs, color='gray', alpha=0.3)
 
         # self._plot_plane(self._ax_world)
-        self._ax_world.set_xlim([-0.5, 3])
-        self._ax_world.set_ylim([-0.5, 3])
+        self._ax_world.set_xlim([-0.5, 6])
+        self._ax_world.set_ylim([-0.5, 5])
         self._ax_world.set_zlim([-1, 1])
         self._ax_world.set_xlabel('X')
         self._ax_world.set_ylabel('Y')
         self._ax_world.set_zlabel('Z')
         self._ax_world.set_title('Flight Simulation')
 
-        self._ax_robot.set_xlim([-0.5, 1])
-        self._ax_robot.set_ylim([-0.75, 0.75])
+        self._ax_robot.set_xlim([-2, 2])
+        self._ax_robot.set_ylim([-2, 2])
         self._ax_robot.set_zlim([-0.75, 0.75])
         self._ax_robot.set_xlabel('X')
         self._ax_robot.set_ylabel('Y')
@@ -563,7 +562,7 @@ class Dragon:
             if len(name) != 2:
                 continue
             if name[0] == "L":
-                offset = [0.15, 0, 0]
+                offset = [0.43, 0, 0]
                 offset = p.rotateVector(orn, offset)
                 pos = [pos[i] + offset[i] for i in range(3)]
 
@@ -618,14 +617,6 @@ class Dragon:
                 else:
                     self._scatter_pos_ref[i]._offsets3d = ([0], [0], [0])
 
-            for i in range(0, self.num_modules):
-
-                yaw, pitch = self.get_yaw_pitch(self._pos_ref[i], self._pos_ref[i + 1])
-                arrow = self._ax_world.quiver(
-                    self._pos_ref[i][0], self._pos_ref[i][1], self._pos_ref[i][2],
-                    np.cos(yaw) * np.cos(pitch), np.sin(yaw) * np.cos(pitch), np.sin(pitch),
-                    color='red', length=self.MODULE_DISTANCE)
-                self._drawn_artists.append(arrow)
 
 
 

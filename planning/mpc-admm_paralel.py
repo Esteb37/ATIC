@@ -6,8 +6,9 @@ import time
 import concurrent.futures
 import multiprocessing
 import scenarios
+import matplotlib.cm as cm
 
-scenario = scenarios.LINE_9
+scenario = scenarios.USHAPE_9
 
 ell = scenarios.ell
 savefile =  scenario["savefile"]
@@ -17,17 +18,16 @@ x_ref =  scenario["x_ref"]
 N_drones =  scenario["N_drones"]
 K_admm =  scenario["K_admm"]
 T_sim =  scenario["T_sim"]
+u_max = scenario["u_max"]
+gamma = scenario["gamma"]
 
 # Parameters
-horizon = 6
+horizon = 10
 dim = 3
 rho = 15.0
-gamma = 50.0
 dt = 0.1
-u_max = 1.0
 eps_pri = 1e-3
 eps_dual = 1e-3
-tau = 1.0
 safety_margin = 0.2
 
 def dynamics(x, u):
@@ -40,7 +40,7 @@ def solve_drone_optimization(i, x_current_i, x_ref_i, x_global_i, alpha_i, x_pre
     constraints = [x[0] == x_current_i]
 
     for t_h in range(horizon):
-        cost += cp.sum_squares(x[t_h] - x_ref_i) + 0.1 * cp.sum_squares(u[t_h])
+        cost += gamma * cp.sum_squares(x[t_h] - x_ref_i) + 0.1 * cp.sum_squares(u[t_h])
         cost += (rho / 2) * cp.sum_squares(x[t_h] - x_global_i[t_h] + alpha_i[t_h])
         constraints += [
             x[t_h + 1] == x[t_h] + dt * u[t_h],
@@ -133,7 +133,7 @@ def main():
                 # ADMM dual update
                 for i in range(N_drones - 1):
                     for t_h in range(horizon):
-                        lambd[i, t_h] += tau * (x_pred[i, t_h] -
+                        lambd[i, t_h] += rho * (x_pred[i, t_h] -
                                         x_pred[i + 1, t_h] - z[i, t_h])
 
                 # Residual check
@@ -170,13 +170,23 @@ def main():
     # ---------------------
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))
 
+    cmap = cm.get_cmap('Blues')
+    T = len(residual_log)
+    norm = plt.Normalize(vmin=0, vmax=T)
+
     for t, residuals in enumerate(residual_log):
+        color = cmap(norm(t))
         dual_res = [r[0] for r in residuals]
         primal_res = [r[1] for r in residuals]
-        ax[0].plot(dual_res, label=f"t={t}")
-        ax[1].plot(primal_res, label=f"t={t}")
+        ax[0].plot(dual_res, color=color)
+        ax[1].plot(primal_res, color=color)
 
+    # Add colorbar to the right of both subplots
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    fig.colorbar(sm, ax=ax[1], orientation='vertical', label='Timestep', pad=0.02)
 
+    # Axis labels and formatting
     ax[0].set_title("Dual Residuals")
     ax[0].set_xlabel("ADMM Iteration")
     ax[0].set_ylabel("Residual")
@@ -194,20 +204,29 @@ def main():
     plt.show()
 
     # ---------------------
-    # Plot costs over ADMM iterations for each timestep
+    # Plot costs
     # ---------------------
     fig2, ax2 = plt.subplots(figsize=(8, 5))
 
+    cmap = cm.get_cmap('Blues')
+    T = len(costs_log)
+    norm = plt.Normalize(vmin=0, vmax=T)
+
     for t, cost_list in enumerate(costs_log):
-        ax2.plot(cost_list, label=f"t={t}")
+        color = cmap(norm(t))
+        ax2.plot(cost_list, color=color)
+
+    # Add colorbar to indicate timestep
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    fig2.colorbar(sm, ax=ax2, label='Timestep', pad=0.02)
 
     ax2.set_title("ADMM Cost Across Iterations per Timestep")
     ax2.set_xlabel("ADMM Iteration")
     ax2.set_ylabel("Objective Cost")
     ax2.grid(True)
-    # ax2.legend(fontsize=8)
     plt.tight_layout()
-    plt.savefig(f"{savefile}_admm_costs.png")
+    plt.savefig(f"saves/{savefile}_admm_costs.png")
     plt.show()
 
 

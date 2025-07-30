@@ -3,26 +3,28 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import cvxpy as cp
 import scenarios
+import matplotlib.cm as cm
 
-scenario = scenarios.USHAPE_5
+scenario = scenarios.USHAPE_SLOW
 
+ell = scenarios.ell
 savefile =  scenario["savefile"]
 obstacles =  scenario["obstacles"]
 x_ref =  scenario["x_ref"]
-x_current = scenario["x_current"]
+
 N_drones =  scenario["N_drones"]
 K_admm =  scenario["K_admm"]
 T_sim =  scenario["T_sim"]
+u_max = scenario["u_max"]
 
 # Parameters
-horizon = 6
+horizon = 10
 dim = 3
 rho = 15.0
 dt = 0.1
-u_max = 1.0
 eps_pri = 1e-3
 eps_dual = 1e-3
-tau = 1.0
+gamma = 3
 safety_margin = 0.2
 
 # Dynamics
@@ -70,10 +72,8 @@ for t in range(T_sim):
             constraints = [x[0] == x_current[i]]
 
             for t_h in range(horizon):
-                cost += cp.sum_squares(x[t_h] - x_ref[i]) + \
-                    0.1 * cp.sum_squares(u[t_h])
-                cost += (rho / 2) * \
-                    cp.sum_squares(x[t_h] - x_global[i, t_h] + alpha[i, t_h])
+                cost += gamma * cp.sum_squares(x[t_h] - x_ref[i]) + 0.1 * cp.sum_squares(u[t_h])
+                cost += (rho / 2) * cp.sum_squares(x[t_h] - x_global[i, t_h] + alpha[i, t_h])
                 constraints += [
                     x[t_h + 1] == x[t_h] + dt * u[t_h],
                     cp.norm(u[t_h], 'inf') <= u_max
@@ -82,13 +82,13 @@ for t in range(T_sim):
                 if i < N_drones - 1:
                     j = i + 1
                     cost += (rho / 2) * cp.sum_squares(x[t_h] -
-                                                       x_pred[j, t_h] - z[i, t_h] + lambd[i, t_h]/rho)
+                                                        x_pred[j, t_h] - z[i, t_h] + lambd[i, t_h]/rho)
                     # cost += cp.sum_squares(x_pred[i + 1, t_h] - x_ref[i + 1])
 
                 if i > 0:
                     j = i - 1
                     cost += (rho / 2) * cp.sum_squares(x[t_h] -
-                                                       x_pred[j, t_h] + z[j, t_h] - lambd[j, t_h] / rho)
+                                                        x_pred[j, t_h] + z[j, t_h] - lambd[j, t_h] / rho)
                     # cost += cp.sum_squares(x_pred[i - 1, t_h] - x_ref[i - 1])
 
             prob = cp.Problem(cp.Minimize(cost), constraints)
@@ -167,14 +167,23 @@ x_hist = np.array(x_hist)
 # Plot residuals over ADMM iterations for each timestep
 # ---------------------
 fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+cmap = cm.get_cmap('Blues')
+T = len(residual_log)
+norm = plt.Normalize(vmin=0, vmax=T)
 
 for t, residuals in enumerate(residual_log):
+    color = cmap(norm(t))
     dual_res = [r[0] for r in residuals]
     primal_res = [r[1] for r in residuals]
-    ax[0].plot(dual_res, label=f"t={t}")
-    ax[1].plot(primal_res, label=f"t={t}")
+    ax[0].plot(dual_res, color=color)
+    ax[1].plot(primal_res, color=color)
 
+# Add colorbar to the right of both subplots
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+fig.colorbar(sm, ax=ax[1], orientation='vertical', label='Timestep', pad=0.02)
 
+# Axis labels and formatting
 ax[0].set_title("Dual Residuals")
 ax[0].set_xlabel("ADMM Iteration")
 ax[0].set_ylabel("Residual")
@@ -192,20 +201,29 @@ plt.savefig(f"saves/{savefile}_admm_residuals.png")
 plt.show()
 
 # ---------------------
-# Plot costs over ADMM iterations for each timestep
+# Plot costs
 # ---------------------
 fig2, ax2 = plt.subplots(figsize=(8, 5))
 
+cmap = cm.get_cmap('Blues')
+T = len(costs_log)
+norm = plt.Normalize(vmin=0, vmax=T)
+
 for t, cost_list in enumerate(costs_log):
-    ax2.plot(cost_list, label=f"t={t}")
+    color = cmap(norm(t))
+    ax2.plot(cost_list, color=color)
+
+# Add colorbar to indicate timestep
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+fig2.colorbar(sm, ax=ax2, label='Timestep', pad=0.02)
 
 ax2.set_title("ADMM Cost Across Iterations per Timestep")
 ax2.set_xlabel("ADMM Iteration")
 ax2.set_ylabel("Objective Cost")
 ax2.grid(True)
-# ax2.legend(fontsize=8)
 plt.tight_layout()
-plt.savefig(f"{savefile}_admm_costs.png")
+plt.savefig(f"saves/{savefile}_admm_costs.png")
 plt.show()
 
 
