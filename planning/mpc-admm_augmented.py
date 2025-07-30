@@ -5,7 +5,7 @@ import cvxpy as cp
 import scenarios
 import matplotlib.cm as cm
 
-scenario = scenarios.USHAPE_SLOW
+scenario = scenarios.USHAPE_TWO_OBS
 
 ell = scenarios.ell
 savefile =  scenario["savefile"]
@@ -16,6 +16,9 @@ N_drones =  scenario["N_drones"]
 K_admm =  scenario["K_admm"]
 T_sim =  scenario["T_sim"]
 u_max = scenario["u_max"]
+gamma = scenario["gamma"]
+x_current = scenario["x_current"]
+x_ref = scenario["x_ref"]
 
 # Parameters
 horizon = 10
@@ -24,7 +27,6 @@ rho = 15.0
 dt = 0.1
 eps_pri = 1e-3
 eps_dual = 1e-3
-gamma = 3
 safety_margin = 0.2
 
 # Dynamics
@@ -32,14 +34,6 @@ def dynamics(x, u):
     return x + dt * u
 
 
-# Initial setup
-x_ref = np.array([[3 + ell, 0, 0],
-                      [3, 0, 0],
-                      [3, ell, 0],
-                      [3, 2 * ell, 0],
-                      [3 + ell, 2 * ell, 0]
-                      ])
-x_current = np.array([[0, i * ell, 0] for i in range(N_drones)])
 x_hist = [x_current.copy()]
 u_hist = []
 
@@ -129,7 +123,7 @@ for t in range(T_sim):
         # ADMM dual update
         for i in range(N_drones - 1):
             for t_h in range(horizon):
-                lambd[i, t_h] += tau * (x_pred[i, t_h] -
+                lambd[i, t_h] += rho * (x_pred[i, t_h] -
                                   x_pred[i + 1, t_h] - z[i, t_h])
 
         # Residual check
@@ -222,6 +216,7 @@ ax2.set_title("ADMM Cost Across Iterations per Timestep")
 ax2.set_xlabel("ADMM Iteration")
 ax2.set_ylabel("Objective Cost")
 ax2.grid(True)
+ax2.set_yscale("log")
 plt.tight_layout()
 plt.savefig(f"saves/{savefile}_admm_costs.png")
 plt.show()
