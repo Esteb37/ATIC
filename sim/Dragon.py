@@ -10,6 +10,8 @@ GRAVITY = 9.81
 
 class Dragon:
 
+    COLORS = ["blue","orange","green","red","purple", "brown", "pink", "gray", "lightgreen"]
+
     def __init__(self, urdf_path="assets/dragon.urdf",
                  start_pos = np.array([0, 0, 3]),
                  start_orientation = np.array([0, 0, 0]), gravity = None):
@@ -24,7 +26,7 @@ class Dragon:
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -self.GRAVITY)
         p.setPhysicsEngineParameter(numSolverIterations=1000)
-        # p.setPhysicsEngineParameter(enableConeFriction=1)
+        p.setPhysicsEngineParameter(enableConeFriction=1)
         p.setPhysicsEngineParameter(numSubSteps=5)
         p.setPhysicsEngineParameter(solverResidualThreshold=1e-6)
         p.setPhysicsEngineParameter(contactBreakingThreshold=0.05)
@@ -384,7 +386,7 @@ class Dragon:
             self.set_joint_pos(i, 0)
 
     def set_pos_ref(self, pos_ref):
-        if len(pos_ref) != self.num_modules + 1:
+        if len(pos_ref[0]) != self.num_modules + 1:
             raise ValueError(f"Position reference must have {self.num_modules + 1} elements.")
         self._pos_ref = pos_ref
 
@@ -507,8 +509,7 @@ class Dragon:
         self._ax_robot = self._fig.add_subplot(122, projection='3d')
         # self._scatter_cog_world = self._ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
         self._scatter_cog_robot = self._ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
-        colors = ["blue","orange","green","red","purple", "brown", "pink", "gray", "lightgreen"]
-        self._scatter_pos_ref = [self._ax_world.scatter([], [], [], color=colors[i], s=40) for i in range(self.num_modules + 1)]
+        self._scatter_pos_ref = [self._ax_world.scatter([], [], [], color=self.COLORS[i], s=40) for i in range(self.num_modules + 1)]
 
         if self.obstacles is not None:
             for obs in self.obstacles:
@@ -610,8 +611,8 @@ class Dragon:
 
         # Plot pos ref
         if self._pos_ref is not None and len(self._pos_ref) > 0:
-
-            for i, pos_ref in enumerate(self._pos_ref):
+            for i, pos_ref in enumerate(self._pos_ref[-1]):
+                self._ax_world.plot([self._pos_ref[:, i, 0]], [self._pos_ref[:, i, 1]], [self._pos_ref[:, i, 2]], color = self.COLORS[i])
                 if len(pos_ref) == 3:
                     self._scatter_pos_ref[i]._offsets3d = ([pos_ref[0]], [pos_ref[1]], [pos_ref[2]])
                 else:

@@ -8,7 +8,7 @@ import multiprocessing
 import scenarios
 import matplotlib.cm as cm
 
-scenario = scenarios.USHAPE_9
+scenario = scenarios.NONAGON
 
 ell = scenarios.ell
 savefile =  scenario["savefile"]

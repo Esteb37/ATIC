@@ -11,7 +11,7 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 import scenarios
 
-scenario = scenarios.USHAPE_9
+scenario = scenarios.USHAPE_TWO_OBS
 
 savefile = scenario["savefile"]
 obstacles =  scenario["obstacles"]
@@ -78,12 +78,13 @@ def align(p1, p2):
 
     return quat.tolist()
 
+
 def sim_loop(dragon: Dragon):
     dist_hist = []
     sim_dist_hist = []
 
     for t, pos in enumerate(mpc_path):
-        dragon.set_pos_ref(pos)
+        dragon.set_pos_ref(mpc_path[:t+1])
 
         abs_orients = []
 
@@ -128,14 +129,7 @@ def sim_loop(dragon: Dragon):
         sim_dist_hist.append(sim_dists)
         print(f"Step {t+1}/{len(mpc_path)}")
 
-    return np.array(dist_hist), np.array(sim_dist_hist)
 
-
-def main():
-    dragon = Dragon(urdf, gravity=0.0)
-    dragon.obstacles = obstacles
-
-    dist_hist, sim_dist_hist = sim_loop(dragon)
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))
     ax[0].plot(dist_hist, label = [f"{i}->{i+1}" for i in range(dragon.num_modules)])
@@ -163,6 +157,15 @@ def main():
     print("Distances plot saved")
 
 
+def main():
+    dragon = Dragon(urdf, gravity=0.0)
+    dragon.obstacles = obstacles
+
+    threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
+    ani = dragon.animate()
+    plt.show()
+    ani.save(f"saves/{savefile}_simulation.gif", writer='pillow', fps=1 / dt)
+    print("Saved")
 
 
 if __name__ == "__main__":
