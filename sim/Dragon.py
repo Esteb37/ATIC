@@ -509,7 +509,7 @@ class Dragon:
         self._ax_robot = self._fig.add_subplot(122, projection='3d')
         # self._scatter_cog_world = self._ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
         self._scatter_cog_robot = self._ax_robot.scatter([], [], [], color='g', s=100, label='Center of Gravity')
-        self._scatter_pos_ref = [self._ax_world.scatter([], [], [], color=self.COLORS[i], s=40) for i in range(self.num_modules + 1)]
+        self._scatter_pos_ref = [self._ax_world.scatter([], [], [], color=self.COLORS[i], s=20) for i in range(self.num_modules + 1)]
 
         if self.obstacles is not None:
             for obs in self.obstacles:
@@ -522,13 +522,13 @@ class Dragon:
                 self._ax_world.plot_surface(xs, ys, zs, color='gray', alpha=0.3)
 
         # self._plot_plane(self._ax_world)
-        self._ax_world.set_xlim([-1, 6])
+        self._ax_world.set_xlim([-1, 12])
         self._ax_world.set_ylim([-1, 6])
-        self._ax_world.set_zlim([-5, 2])
+        self._ax_world.set_zlim([-3, 2])
         self._ax_world.set_xlabel('X')
         self._ax_world.set_ylabel('Y')
         self._ax_world.set_zlabel('Z')
-        self._ax_world.set_title('Flight Simulation')
+        self._ax_world.set_title('Flight Simulation (m)')
 
         self._ax_robot.set_xlim([-2, 2])
         self._ax_robot.set_ylim([-2, 2])
@@ -536,7 +536,7 @@ class Dragon:
         self._ax_robot.set_xlabel('X')
         self._ax_robot.set_ylabel('Y')
         self._ax_robot.set_zlabel('Z')
-        self._ax_robot.set_title('Shape')
+        self._ax_robot.set_title('Shape (m)')
         self._ax_robot.legend()
 
         self._box_artists = []

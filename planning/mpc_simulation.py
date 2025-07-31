@@ -11,7 +11,7 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 import scenarios
 
-scenario = scenarios.USHAPE_5
+scenario = scenarios.SNAKE_5_LONG
 
 savefile = scenario["savefile"]
 obstacles =  scenario["obstacles"]
@@ -82,6 +82,7 @@ def sim_loop(dragon: Dragon):
     dist_hist = []
     sim_dist_hist = []
 
+    ell = dragon.MODULE_DISTANCE
 
     for t, pos in enumerate(mpc_path[1:]):
         dragon.set_pos_ref(mpc_path[:t+1])
@@ -126,8 +127,8 @@ def sim_loop(dragon: Dragon):
             dist = np.linalg.norm(pos[i] - dragon.link_position(f"joint{i}_yaw"))
             sim_dists.append(dist)
 
-        dist_hist.append(dists)
-        sim_dist_hist.append(sim_dists)
+        dist_hist.append((np.array(dists) - ell) * 1000)
+        sim_dist_hist.append(np.array(sim_dists) * 1000)
         print(f"Step {t+1}/{len(mpc_path)}")
 
 
@@ -136,8 +137,7 @@ def sim_loop(dragon: Dragon):
     ax[0].plot(dist_hist, label = [f"{i}->{i+1}" for i in range(dragon.num_modules)])
 
     # Horizontal line at ell
-    ell = dragon.MODULE_DISTANCE
-    ax[0].axhline(y=ell, color='r', linestyle='--', label='Module distance (ell)')
+
     ymin = np.min(dist_hist)
     ymax = np.max(dist_hist)
     margin = 0.05 * (ymax - ymin)  # optional small buffer
@@ -145,14 +145,15 @@ def sim_loop(dragon: Dragon):
     ax[0].legend()
     ax[0].set_title("Rigid constraint violation")
     ax[0].set_xlabel("Time step")
-    ax[0].set_ylabel("Distance (m)")
+    ax[0].set_ylabel("Distance (mm)")
     ax[0].grid(True)
     ax[1].plot(sim_dist_hist, label = [f"Module {i}" for i in range(dragon.num_modules)])
     ax[1].set_title("Simulation tracking error")
     ax[1].set_xlabel("Time step")
-    ax[1].set_ylabel("Distance (m)")
+    ax[1].set_ylabel("Distance (mm)")
     ax[1].grid(True)
     ax[1].legend()
+    plt.tight_layout()
     plt.savefig(f"saves/{savefile}_distances_plot.png")
 
     print("Distances plot saved")

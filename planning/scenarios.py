@@ -7,10 +7,11 @@ import numpy as np
 
 dragon = Dragon()
 ell = dragon.MODULE_DISTANCE
+dist = ell * np.sqrt(2) / 2
 
 USHAPE_5 = {
   "savefile":"ushape_5",
-  "obstacles": [{"center": np.array([1.5, 2.5, -0.5]), "radius": 0.8}],
+  "obstacles": [],
   "x_ref":np.array([[4 + ell, 0, 0],
                     [4, 0, 0],
                     [4, ell, 0],
@@ -26,20 +27,46 @@ USHAPE_5 = {
   "rho": 15,
 }
 
-USHAPE_5_LONG = {
-  "savefile":"ushape_5",
+SNAKE_5 = {
+  "savefile":"snake_5",
   "obstacles": [{"center": np.array([1.5, 2.5, -0.5]), "radius": 0.8},
-                {"center": np.array([3.5, 1.5, -0.5]), "radius": 0.8},
-                {"center": np.array([5.5, 0.5, -0.5]), "radius": 0.8},
-                {"center": np.array([7.5, 1.5, 0.5]), "radius": 0.8},
-                {"center": np.array([8.5, 2.5, 0.5]), "radius": 0.8},
+                {"center": np.array([3.5, 1.5, -0.5]), "radius": 0.8}
                 ],
-
-  "x_ref":np.array([[9, i * ell, 0] for i in range(5)]),
+  "x_ref":np.array([[4, 0, 0],
+                    [4 + dist, dist, 0],
+                    [4, 2 * dist, 0],
+                    [4 + dist, 3 * dist, 0],
+                    [4, 4 * dist, 0]
+                  ]),
   "x_current":np.array([[0, i * ell, 0] for i in range(5)]),
   "N_drones":5,
   "K_admm":50,
-  "T_sim":150,
+  "T_sim":60,
+  "u_max": 1.0,
+  "gamma": 3,
+  "rho": 15,
+}
+
+SNAKE_5_LONG = {
+  "savefile":"snake_5_long",
+  "obstacles": [{"center": np.array([1.5, 2.5, -0.3]), "radius": 0.8},
+                {"center": np.array([3.5, 1.5, -0.3]), "radius": 0.8},
+                {"center": np.array([5.5, 0.5, -0.3]), "radius": 0.8},
+                {"center": np.array([7.5, 1.5, 0.3]), "radius": 0.8},
+                {"center": np.array([9.5, 2.5, 0.3]), "radius": 0.8},
+                ],
+
+  "x_ref":np.array([[11, 0, 0],
+                    [11 + dist, dist, 0],
+                    [11, 2 * dist, 0],
+                    [11 + dist, 3 * dist, 0],
+                    [11, 4 * dist, 0]
+                  ]),
+
+  "x_current":np.array([[0, i * ell, 0] for i in range(5)]),
+  "N_drones":5,
+  "K_admm":50,
+  "T_sim":120,
   "u_max": 1.0,
   "gamma": 3,
   "rho": 15,
@@ -50,16 +77,16 @@ USHAPE_TWO_OBS = {
   "obstacles": [{"center": np.array([1.5, 2.5, -0.5]), "radius": 0.8},
                 {"center": np.array([3.5, 1.5, -0.5]), "radius": 0.8}
                 ],
-  "x_ref":np.array([[5 + ell, 0, 0],
-                    [5, 0, 0],
-                    [5, ell, 0],
-                    [5, 2 * ell, 0],
-                    [5 + ell, 2 * ell, 0]
+  "x_ref":np.array([[6 + ell, 0, 0],
+                    [6, 0, 0],
+                    [6, ell, 0],
+                    [6, 2 * ell, 0],
+                    [6 + ell, 2 * ell, 0]
                   ]),
   "x_current":np.array([[0, i * ell, 0] for i in range(5)]),
   "N_drones":5,
   "K_admm":50,
-  "T_sim":70,
+  "T_sim":80,
   "u_max": 1.0,
   "gamma": 3,
   "rho": 15.0,
@@ -103,9 +130,7 @@ USHAPE_5_REV = {
 
 LINE_9 = {
   "savefile":"line_9",
-  "obstacles": [{"center": np.array([1.5, 2.5, -0.5]), "radius": 0.6},
-                {"center": np.array([3.5, 1.5, -0.5]), "radius": 0.6}
-                ],
+  "obstacles": [],
   "x_ref":np.array([[i * ell, 0.0, 0.0] for i in range(9)]),
   "x_current":np.array([[0, i * ell, 0] for i in range(9)]),
   "N_drones":9,

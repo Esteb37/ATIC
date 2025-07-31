@@ -8,7 +8,7 @@ import multiprocessing
 import scenarios
 import matplotlib.cm as cm
 
-scenario = scenarios.USHAPE_5_LONG
+scenario = scenarios.SNAKE_5_LONG
 
 ell = scenarios.ell
 savefile =  scenario["savefile"]
