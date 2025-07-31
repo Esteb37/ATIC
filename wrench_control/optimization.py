@@ -12,14 +12,10 @@ import time
 
 np.set_printoptions(precision=4, suppress=True)
 
-dragon = Dragon("assets/dragon_long.urdf", start_pos=[0, 0, 0.5])
-dragon.set_joint_pos("joint1_pitch",-1.5)
-dragon.set_joint_pos("joint2_pitch", 1.5)
-dragon.set_joint_pos("joint3_pitch", -1.5)
-dragon.set_joint_pos("joint4_pitch", 1.5)
-dragon.set_joint_pos("joint5_pitch", -1.5)
-dragon.set_joint_pos("joint6_pitch", 1.5)
-dragon.set_joint_pos("joint7_pitch", -1.5)
+dragon = Dragon()
+dragon.reset_joint_pos("joint1_yaw", 1)
+dragon.reset_joint_pos("joint2_yaw", 1)
+dragon.reset_joint_pos("joint3_yaw", 1)
 dragon.hover()
 dragon.step()
 
@@ -28,8 +24,8 @@ F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-savefile = "long_snake"
-W_star = np.array([2, 0, 10.5 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
+savefile = "ushape_forward"
+W_star = np.array([2, 0, 9.81 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
 fps = 15
@@ -104,14 +100,15 @@ def sim_loop(dragon: Dragon):
     dragon.reset_joint_pos("F2", theta[1])
     dragon.reset_joint_pos("F3", theta[2])
     dragon.reset_joint_pos("F4", theta[3])
+    dragon.reset_joint_pos("joint1_yaw", 1)
+    dragon.reset_joint_pos("joint2_yaw", 1)
+    dragon.reset_joint_pos("joint3_yaw", 1)
 
     k += 1
 
     dragon.step()
     dragon.thrust([lam[0] / 2, lam[0] / 2, lam[1] / 2, lam[1] / 2,
-                  lam[2] / 2, lam[2] / 2, lam[3] / 2, lam[3] / 2,
-                  lam[4] / 2, lam[4] / 2, lam[5] / 2, lam[5] / 2,
-                  lam[6] / 2, lam[6] / 2, lam[7] / 2, lam[7] / 2])
+                  lam[2] / 2, lam[2] / 2, lam[3] / 2, lam[3] / 2])
 
     # Print seconds
     print(f"{k / 240:.2f}s", end="\r")

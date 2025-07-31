@@ -521,7 +521,7 @@ class Dragon:
                 zs = r * np.cos(v) + cz
                 self._ax_world.plot_surface(xs, ys, zs, color='gray', alpha=0.3)
 
-        self._ax_world.set_xlim([-1, 15])
+        self._ax_world.set_xlim([-1, 7])
         self._ax_world.set_ylim([-2, 2])
         self._ax_world.set_zlim([0, 4])
         self._ax_world.set_xlabel('X')

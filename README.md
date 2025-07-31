@@ -9,3 +9,22 @@ State-of-the-art articulated modular aerial robots provide versatility in wrench
   <img src="saves/ushape_9_no_simulation.gif" width="49%"/>
   <img src="saves/ushape_5_REV_simulation.gif" width="49%"/>
 </div>
+
+# Distributed Thrust Allocation for Wrench Control
+
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <div style="width: 49%; text-align:center">
+  <h2>Open Loop Thrust</h2>
+  </div>
+  <div style="width: 49%; text-align:center">
+  <h2>Distributed Thrust Allocation</h2>
+  </div>
+  <img src="saves/no_control_wrench.gif" width="49%"/>
+  <img src="saves/forward_snake_wrench.gif" width="49%"/>
+</div>
+
+## More examples
+<img src="saves/long_snake_wrench.gif" width="100%"/>
+<img src="saves/hover_ushape_wrench.gif" width="50%"/>
+<img src="saves/turn_line_wrench.gif" width="49%"/>
