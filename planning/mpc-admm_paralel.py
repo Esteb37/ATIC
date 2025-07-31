@@ -8,6 +8,8 @@ import multiprocessing
 import scenarios
 import matplotlib.cm as cm
 
+plt.rcParams['font.size'] = 20
+
 scenario = scenarios.USHAPE_TWO_OBS
 
 ell = scenarios.ell

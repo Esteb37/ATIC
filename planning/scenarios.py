@@ -81,7 +81,7 @@ LINE_5_LONG = {
                 {"center": np.array([9.5, 2.5, 0.3]), "radius": 0.8},
                 ],
 
-  "x_ref":np.array([[11 + i * ell, 0, 0] for i in range(5)]),
+  "x_ref":np.array([[0, 11 + i * ell, 0] for i in range(5)]),
   "x_current":np.array([[0, i * ell, 0] for i in range(5)]),
   "N_drones":5,
   "K_admm":50,

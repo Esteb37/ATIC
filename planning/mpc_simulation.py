@@ -11,6 +11,8 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 import scenarios
 
+plt.rcParams['font.size'] = 20
+
 scenario = scenarios.USHAPE_TWO_OBS
 
 savefile = scenario["savefile"]
@@ -142,7 +144,7 @@ def sim_loop(dragon: Dragon):
     ymax = np.max(dist_hist)
     margin = 0.05 * (ymax - ymin)  # optional small buffer
     ax[0].set_ylim(ymin - margin, ymax + margin)
-    ax[0].legend()
+    ax[0].legend(fontsize = 14)
     ax[0].set_title("Rigid constraint violation")
     ax[0].set_xlabel("Time step")
     ax[0].set_ylabel("Distance (mm)")
@@ -152,7 +154,7 @@ def sim_loop(dragon: Dragon):
     ax[1].set_xlabel("Time step")
     ax[1].set_ylabel("Distance (mm)")
     ax[1].grid(True)
-    ax[1].legend()
+    ax[1].legend(fontsize = 14)
     plt.tight_layout()
     plt.savefig(f"saves/{savefile}_distances_plot.png")
 
