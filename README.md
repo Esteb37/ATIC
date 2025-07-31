@@ -14,11 +14,8 @@ State-of-the-art articulated modular aerial robots provide versatility in wrench
 
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <div style="width: 49%; text-align:center">
-  <h2>Open Loop Thrust</h2>
-  </div>
-  <div style="width: 49%; text-align:center">
-  <h2>Distributed Thrust Allocation</h2>
+  <div style="width: 100%; text-align:center">
+  <h2>Open Loop Thrust vs Distributed Thrust Allocation</h2>
   </div>
   <img src="saves/no_control_wrench.gif" width="49%"/>
   <img src="saves/forward_snake_wrench.gif" width="49%"/>
