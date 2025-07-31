@@ -72,6 +72,25 @@ SNAKE_5_LONG = {
   "rho": 15,
 }
 
+LINE_5_LONG = {
+  "savefile":"line_5_long",
+  "obstacles": [{"center": np.array([1.5, 2.5, -0.3]), "radius": 0.8},
+                {"center": np.array([3.5, 1.5, -0.3]), "radius": 0.8},
+                {"center": np.array([5.5, 0.5, -0.3]), "radius": 0.8},
+                {"center": np.array([7.5, 1.5, 0.3]), "radius": 0.8},
+                {"center": np.array([9.5, 2.5, 0.3]), "radius": 0.8},
+                ],
+
+  "x_ref":np.array([[11 + i * ell, 0, 0] for i in range(5)]),
+  "x_current":np.array([[0, i * ell, 0] for i in range(5)]),
+  "N_drones":5,
+  "K_admm":50,
+  "T_sim":120,
+  "u_max": 1.0,
+  "gamma": 3,
+  "rho": 15,
+}
+
 USHAPE_TWO_OBS = {
   "savefile":"ushape_two_obs",
   "obstacles": [{"center": np.array([1.5, 2.5, -0.5]), "radius": 0.8},

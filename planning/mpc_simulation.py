@@ -11,7 +11,7 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 import scenarios
 
-scenario = scenarios.SNAKE_5_LONG
+scenario = scenarios.USHAPE_TWO_OBS
 
 savefile = scenario["savefile"]
 obstacles =  scenario["obstacles"]

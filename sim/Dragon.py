@@ -522,7 +522,7 @@ class Dragon:
                 self._ax_world.plot_surface(xs, ys, zs, color='gray', alpha=0.3)
 
         # self._plot_plane(self._ax_world)
-        self._ax_world.set_xlim([-1, 12])
+        self._ax_world.set_xlim([-1, 7])
         self._ax_world.set_ylim([-1, 6])
         self._ax_world.set_zlim([-3, 2])
         self._ax_world.set_xlabel('X')
