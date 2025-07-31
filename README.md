@@ -26,5 +26,5 @@ State-of-the-art articulated modular aerial robots provide versatility in wrench
 
 ## More examples
 <img src="saves/long_snake_wrench.gif" width="100%"/>
-<img src="saves/hover_ushape_wrench.gif" width="50%"/>
+<img src="saves/hover_ushape_wrench.gif" width="49%"/>
 <img src="saves/turn_line_wrench.gif" width="49%"/>
