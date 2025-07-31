@@ -8,7 +8,7 @@ import multiprocessing
 import scenarios
 import matplotlib.cm as cm
 
-scenario = scenarios.NONAGON
+scenario = scenarios.USHAPE_5_LONG
 
 ell = scenarios.ell
 savefile =  scenario["savefile"]
@@ -20,11 +20,11 @@ K_admm =  scenario["K_admm"]
 T_sim =  scenario["T_sim"]
 u_max = scenario["u_max"]
 gamma = scenario["gamma"]
+rho = scenario["rho"]
 
 # Parameters
 horizon = 10
 dim = 3
-rho = 15.0
 dt = 0.1
 eps_pri = 1e-3
 eps_dual = 1e-3
@@ -184,6 +184,7 @@ def main():
     # Add colorbar to the right of both subplots
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
+    fig.colorbar(sm, ax=ax[0], orientation='vertical', label='Timestep', pad=0.02)
     fig.colorbar(sm, ax=ax[1], orientation='vertical', label='Timestep', pad=0.02)
 
     # Axis labels and formatting
@@ -208,9 +209,6 @@ def main():
     # ---------------------
     fig2, ax2 = plt.subplots(figsize=(8, 5))
 
-    cmap = cm.get_cmap('Blues')
-    T = len(costs_log)
-    norm = plt.Normalize(vmin=0, vmax=T)
 
     for t, cost_list in enumerate(costs_log):
         color = cmap(norm(t))
@@ -224,6 +222,7 @@ def main():
     ax2.set_title("ADMM Cost Across Iterations per Timestep")
     ax2.set_xlabel("ADMM Iteration")
     ax2.set_ylabel("Objective Cost")
+    ax2.set_yscale("log")
     ax2.grid(True)
     plt.tight_layout()
     plt.savefig(f"saves/{savefile}_admm_costs.png")

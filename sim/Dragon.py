@@ -504,7 +504,7 @@ class Dragon:
         self._drawn_artists.append(sphere)
 
     def _init_plot(self):
-        self._fig = plt.figure(figsize=(10, 10))
+        self._fig = plt.figure(figsize=(12, 5))
         self._ax_world = self._fig.add_subplot(121, projection='3d')
         self._ax_robot = self._fig.add_subplot(122, projection='3d')
         # self._scatter_cog_world = self._ax_world.scatter([], [], [], color='g', s=100, label='Center of Gravity')
@@ -522,9 +522,9 @@ class Dragon:
                 self._ax_world.plot_surface(xs, ys, zs, color='gray', alpha=0.3)
 
         # self._plot_plane(self._ax_world)
-        self._ax_world.set_xlim([-0.5, 6])
-        self._ax_world.set_ylim([-0.5, 5])
-        self._ax_world.set_zlim([-1, 1])
+        self._ax_world.set_xlim([-1, 6])
+        self._ax_world.set_ylim([-1, 6])
+        self._ax_world.set_zlim([-5, 2])
         self._ax_world.set_xlabel('X')
         self._ax_world.set_ylabel('Y')
         self._ax_world.set_zlabel('Z')

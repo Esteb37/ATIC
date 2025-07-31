@@ -11,7 +11,7 @@ import pybullet as p
 from scipy.spatial.transform import Rotation as R
 import scenarios
 
-scenario = scenarios.USHAPE_TWO_OBS
+scenario = scenarios.USHAPE_5
 
 savefile = scenario["savefile"]
 obstacles =  scenario["obstacles"]
@@ -78,18 +78,19 @@ def align(p1, p2):
 
     return quat.tolist()
 
-
 def sim_loop(dragon: Dragon):
     dist_hist = []
     sim_dist_hist = []
 
-    for t, pos in enumerate(mpc_path):
+
+    for t, pos in enumerate(mpc_path[1:]):
         dragon.set_pos_ref(mpc_path[:t+1])
 
         abs_orients = []
 
         # Absolute orientation of first link
         yaw0, pitch0 = get_yaw_pitch(pos[0], pos[1])
+
         abs_orients.append((yaw0, pitch0))
 
         # Place base link
@@ -163,9 +164,8 @@ def main():
 
     threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
     ani = dragon.animate()
-    plt.show()
     ani.save(f"saves/{savefile}_simulation.gif", writer='pillow', fps=1 / dt)
-    print("Saved")
+
 
 
 if __name__ == "__main__":
