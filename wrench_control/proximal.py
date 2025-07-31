@@ -43,7 +43,7 @@ def module_problem(MODULE, phi, theta, lamb, dual_W, z_W):
 
     # CVX Problem Setup
 
-    W, A, _= dragon.linearize_module(MODULE, phi, theta, lamb)
+    W, A, = dragon.linearize_module(MODULE, phi, theta, lamb)
 
     dx = cp.Variable(3)
 
@@ -156,7 +156,7 @@ def solve_admm(dragon : Dragon):
   ax4.axhline(W_star[2], color='black', linestyle='--', label='Real CoG Z')
   ax4.legend()
   plt.savefig("admm_wrench_convergence.png")
-  print("here")
+
 
 
 def sim_loop(dragon: Dragon):

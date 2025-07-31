@@ -4,16 +4,22 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
 import cvxpy as cp
-import sim.Dragon as Dragon
+from sim.Dragon import Dragon
 import pybullet as p
 import threading
+import matplotlib.pyplot as plt
+import time
 
 np.set_printoptions(precision=4, suppress=True)
 
-dragon = Dragon.Dragon()
+dragon = Dragon("assets/dragon_long.urdf", start_pos=[0, 0, 0.5])
 dragon.set_joint_pos("joint1_pitch",-1.5)
 dragon.set_joint_pos("joint2_pitch", 1.5)
-dragon.set_joint_pos("joint3_pitch", 1.5)
+dragon.set_joint_pos("joint3_pitch", -1.5)
+dragon.set_joint_pos("joint4_pitch", 1.5)
+dragon.set_joint_pos("joint5_pitch", -1.5)
+dragon.set_joint_pos("joint6_pitch", 1.5)
+dragon.set_joint_pos("joint7_pitch", -1.5)
 dragon.hover()
 dragon.step()
 
@@ -22,25 +28,21 @@ F_G_z = np.linalg.norm(dragon.link_position("F1") - dragon.link_position("G1"))
 e_z = np.array([0, 0, 1])
 
 # Desired total wrench change
-W_star = np.array([2, 1, 9.81 * dragon.total_mass, 1, 1, 1])  # fx, fy, fz, tx, ty, tz
+savefile = "long_snake"
+W_star = np.array([2, 0, 10.5 * dragon.total_mass, 0, 0, 0])  # fx, fy, fz, tx, ty, tz
 W_hist = []  # History of wrenches
 
+fps = 15
 
 def sim_loop(dragon: Dragon):
-
   k = 0
-
   while True:
-
     if k % 5 == 0:
-      print("Iteration:", k)
 
       phi = []
       theta = []
       lam = []
 
-
-      A = []
       W = np.zeros(6)
       dx = []
 
@@ -53,7 +55,7 @@ def sim_loop(dragon: Dragon):
         theta_i = dragon.get_joint_pos(f"F{MODULE}")
         lambda_i = dragon.module_thrust(MODULE)
 
-        W_i, A_i = dragon.linearize_module(MODULE, phi_i, theta_i, lambda_i)
+        W_i, J_i = dragon.linearize_module(MODULE, phi_i, theta_i, lambda_i)
 
         # === CVXPY problem ===
 
@@ -62,7 +64,7 @@ def sim_loop(dragon: Dragon):
 
         W += W_i  # Accumulate wrench
 
-        suma = A_i @ dx_i + suma  # Sum of all contributions
+        suma = J_i @ dx_i + suma  # Sum of all contributions
 
         constraints.append(phi_i + dx_i[0] >= -np.pi / 2)  # phi >= -90 degrees
         constraints.append(phi_i + dx_i[0] <= np.pi / 2)   # phi <= 90 degrees
@@ -87,9 +89,6 @@ def sim_loop(dragon: Dragon):
       prob.solve()
 
       for i in range(dragon.num_modules):
-        print(f"Module {i+1}: dx = {dx[i].value}, W = {W[i]}")
-
-      for i in range(dragon.num_modules):
         # Update angles and thrusts
         phi[i] += dx[i][0].value
         theta[i] += dx[i][1].value
@@ -110,11 +109,17 @@ def sim_loop(dragon: Dragon):
 
     dragon.step()
     dragon.thrust([lam[0] / 2, lam[0] / 2, lam[1] / 2, lam[1] / 2,
-                  lam[2] / 2, lam[2] / 2, lam[3] / 2, lam[3] / 2,])
+                  lam[2] / 2, lam[2] / 2, lam[3] / 2, lam[3] / 2,
+                  lam[4] / 2, lam[4] / 2, lam[5] / 2, lam[5] / 2,
+                  lam[6] / 2, lam[6] / 2, lam[7] / 2, lam[7] / 2])
+
+    # Print seconds
+    print(f"{k / 240:.2f}s", end="\r")
 
 def main():
   threading.Thread(target=sim_loop, args=(dragon,), daemon=True).start()
-  dragon.animate()
+  ani = dragon.animate()
+  ani.save(f"saves/{savefile}_wrench.gif", writer='pillow', fps=fps, dpi=100)
 
 if __name__ == "__main__":
     main()

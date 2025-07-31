@@ -51,7 +51,7 @@ dW_pred_hist = []
 
 V = W.copy()
 
-Q = np.diag([1, 1, 1, 10, 20, 10]) * alpha
+Q = np.diag([1, 1, 1, 1, 1, 1]) * alpha
 
 MAX_ITERS = 100
 
@@ -61,6 +61,7 @@ prev_dW = None
 for k in range(MAX_ITERS):
   V_new = V.copy()
   dus = []
+  Js = []
   for i in range(N):
     dW = W_star / N - W[i]
 
@@ -95,6 +96,8 @@ for k in range(MAX_ITERS):
     V_new[i] += Q @ (J @ du_value - dW) + beta * cons
 
     dW_pred[i] = J @ du_value
+    Js.append(J)
+    dus.append(du)
 
   dW_pred_hist.append(dW_pred.copy())
   V = V_new.copy()
@@ -104,6 +107,26 @@ for k in range(MAX_ITERS):
     break
 
   prev_dW = np.sum(dW_pred, axis=0)
+
+thrusts = []
+pred_dW = np.zeros(6)
+for i in range(N):
+
+  phi = dragon.module_phi(i + 1) + dus[i][0].value
+  theta = dragon.module_theta(i + 1) + dus[i][1].value
+  thrust = dragon.module_thrust(i + 1) + dus[i][2].value
+
+  dragon.reset_joint_pos("G" + str(i + 1),  phi)
+  dragon.reset_joint_pos("F" + str(i + 1), theta)
+  thrusts.append(thrust / 2)
+  thrusts.append(thrust / 2)
+
+  pred_dW += Js[i] @ dus[i].value
+
+dragon.step()
+dragon.thrust(thrusts)
+
+print(dragon.wrench() - W_star)
 
 names = ["FX", "FY", "FZ", "TX", "TY", "TZ"]
 fig = plt.figure()
